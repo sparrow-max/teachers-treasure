@@ -7,6 +7,9 @@
 <!-- 列出涉及的 API；无则填“无” -->
 
 - [ ] 无
+- [ ] `POST /api/v1/auth/login`
+- [ ] `GET /api/v1/auth/me`
+- [ ] `POST /api/v1/auth/change-password`
 - [ ] `GET /api/v1/students`
 - [ ] `POST /api/v1/students`
 - [ ] `DELETE /api/v1/students/{student_id}`
