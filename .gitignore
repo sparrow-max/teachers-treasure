@@ -1,0 +1,40 @@
+# 前端
+node_modules/
+dist/
+dist-ssr/
+coverage/
+*.local
+.vite/
+
+# 后端
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# 环境变量与密钥
+.env
+.env.*
+!.env.example
+
+# 数据库
+*.db
+*.sqlite
+*.sqlite3
+*.dump
+
+# 编辑器与系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# 日志
+*.log
+logs/
+
+# 本地工具
+.codeartsdoer/
