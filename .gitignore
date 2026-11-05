@@ -36,5 +36,8 @@ Thumbs.db
 *.log
 logs/
 
-# 本地工具
-.codeartsdoer/
+# 本地工具（仅放行 SDD 规格制品）
+.codeartsdoer/*
+!.codeartsdoer/specs/
+.codeartsdoer/specs/*
+!.codeartsdoer/specs/teacher_rollcall/
