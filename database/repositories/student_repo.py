@@ -19,10 +19,13 @@ def list_students(
     keyword: str | None = None,
     active: bool = True,
     include_inactive: bool = False,
+    class_id: int | None = None,
 ) -> list[Student]:
     stmt = select(Student)
     if not include_inactive:
         stmt = stmt.where(Student.active.is_(active))
+    if class_id is not None:
+        stmt = stmt.where(Student.class_id == class_id)
     if keyword:
         like = f"%{keyword.strip()}%"
         stmt = stmt.where(
@@ -40,9 +43,12 @@ def create_student(
     db: Session,
     student_no: str,
     name: str,
+    class_id: int,
     role: str = ROLE_STUDENT,
 ) -> Student:
-    student = Student(student_no=student_no, name=name, role=role)
+    student = Student(
+        student_no=student_no, name=name, role=role, class_id=class_id
+    )
     db.add(student)
     db.flush()
     db.refresh(student)
@@ -61,22 +67,24 @@ def deactivate_student(
     return result.rowcount == 1
 
 
-def count_active_students(db: Session) -> int:
-    return int(db.scalar(
-        select(func.count(Student.id)).where(Student.active.is_(True))
-    ) or 0)
+def count_active_students(
+    db: Session, class_id: int | None = None
+) -> int:
+    stmt = select(func.count(Student.id)).where(Student.active.is_(True))
+    if class_id is not None:
+        stmt = stmt.where(Student.class_id == class_id)
+    return int(db.scalar(stmt) or 0)
 
 
 def list_active_students_ordered(
-    db: Session, order_by: str
+    db: Session, order_by: str, class_id: int | None = None
 ) -> list[Student]:
     columns = _ORDER_BY_WHITELIST.get(order_by)
     if columns is None:
         raise ValueError(f"unsupported order_by: {order_by}")
     order = [getattr(Student, column).asc() for column in columns]
-    stmt = (
-        select(Student)
-        .where(Student.active.is_(True))
-        .order_by(*order)
-    )
+    stmt = select(Student).where(Student.active.is_(True))
+    if class_id is not None:
+        stmt = stmt.where(Student.class_id == class_id)
+    stmt = stmt.order_by(*order)
     return list(db.scalars(stmt).all())

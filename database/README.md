@@ -22,7 +22,7 @@
 
 ```text
 database/
-├── models.py                 # 4 张表的 ORM 模型与约束
+├── models.py                 # 5 张表的 ORM 模型与约束
 ├── config.py                 # 默认数据库绝对路径
 ├── session.py                # engine、SessionLocal、get_db、session_scope
 ├── schema.sql                # SQLite 权威 DDL（与迁移结果一致）
@@ -34,8 +34,11 @@ database/
 │       ├── 0002_create_rollcall_sessions.py
 │       ├── 0003_create_attendance_records.py
 │       ├── 0004_create_users.py
-│       └── 0005_add_user_token_version.py
+│       ├── 0005_add_user_token_version.py
+│       ├── 0006_create_classes.py
+│       └── 0007_add_class_id.py
 ├── repositories/
+│   ├── class_repo.py
 │   ├── student_repo.py
 │   ├── session_repo.py
 │   ├── record_repo.py
@@ -80,12 +83,12 @@ database/.venv/bin/python -m database.seeds.seed_demo
 
 ### 演示账号
 
-| 账号 | 密码 | 角色 | 说明 |
-| --- | --- | --- | --- |
-| `teacher` | 由 `SEED_TEACHER_PASSWORD` 指定；未指定则随机打印 | 教师 | 首次登录必须改密 |
-| `20230001` | `20230001` | 学生（张三） | 首次登录必须改密 |
-| `20230002` | `20230002` | 学生（李四） | 首次登录必须改密 |
-| `20230003` | `20230003` | 班长（王五） | 首次登录必须改密 |
+| 账号 | 密码 | 角色 | 班级 | 说明 |
+| --- | --- | --- | --- | --- |
+| `teacher` | 由 `SEED_TEACHER_PASSWORD` 指定；未指定则随机打印 | 教师 | — | 首次登录必须改密 |
+| `20230001` | `20230001` | 学生（张三） | 2023-1 | 首次登录必须改密 |
+| `20230002` | `20230002` | 学生（李四） | 2023-1 | 首次登录必须改密 |
+| `20230003` | `20230003` | 班长（王五） | 2023-1 | 首次登录必须改密 |
 
 > 演示前先让学生账号完成一次首次改密，避免现场被强制跳转改密页。
 
@@ -114,6 +117,8 @@ DATABASE_URL=sqlite:///./database/teacher_treasure.db \
 3. `0003` 签到/缺勤记录
 4. `0004` 登录账号
 5. `0005` `users.token_version`（改密后旧 Token 失效）
+6. `0006` 班级表 `classes`
+7. `0007` `students.class_id` / `rollcall_sessions.class_id`，旧数据回填 `DEFAULT` 班级
 
 ---
 
@@ -133,7 +138,8 @@ with SessionLocal() as db:
 
 主要函数见 `docs/数据库.md` 第 6 章，当前实现已覆盖：
 
-- 学生：列表（`keyword`、`active`、`include_inactive`）、按 ID、新增、软删除、在册计数、按顺序取在册名单。
+- 班级：列表（`visible_class_id`）、按 ID/编号、创建、停用、在册学生数、编号存在性。
+- 学生：列表（`keyword`、`active`、`include_inactive`、`class_id`）、按 ID、新增、软删除、在册计数、按顺序取在册名单。
 - 场次：创建、按 ID（可选行锁）、结束、分页（学生过滤）、按场次聚合统计。
 - 记录：批量创建、列表（按状态/学生）、单条、原子签到、批量转缺勤、状态计数。
 - 账号：按用户名/ID 查询、创建、改密（`token_version + 1`）、更新登录时间、按学生禁用、用户名存在性。
@@ -163,12 +169,13 @@ with session_scope() as db:          # 成功自动 commit，异常自动 rollba
 
 | 表 | 关键约束 |
 | --- | --- |
-| `students` | `student_no` 唯一；学号 6–32；姓名 1–32；角色三值；软删除 `active` |
-| `rollcall_sessions` | 状态 `calling/ended`；`ended` 必须有 `ended_at`；`calling` 必须无 `ended_at` |
-| `attendance_records` | `(session_id, student_id)` 唯一；`(session_id, order_no)` 唯一；`pending` 无时间、`present/absent` 必须有时间；删除场次级联删除记录，删除学生受 RESTRICT |
+| `classes` | `code` 唯一；名称/编号 1–32；软删除 `active` |
+| `students` | `class_id` 非空外键；`student_no` 唯一；学号 6–32；姓名 1–32；角色三值；软删除 `active` |
+| `rollcall_sessions` | `class_id` 非空外键；状态 `calling/ended`；`ended` 必须有 `ended_at`；`calling` 必须无 `ended_at` |
+| `attendance_records` | `(session_id, student_id)` 唯一；`(session_id, order_no)` 唯一；`pending` 无时间、`present/absent` 必须有时间；删除场次级联删除记录，删除学生/班级受 RESTRICT |
 | `users` | 用户名唯一；学生/班长必须绑定学生且一个学生最多一个账号；教师不绑定；`token_version` 非负 |
 
-索引：`students(active, student_no)`、`sessions(started_at, id)`、`sessions(status)`、`records(session_id, status, order_no)`、`records(session_id, order_no)`、`records(student_id)`、`users(role)`、`users(active)`。
+索引：`classes(active, code)`、`students(active, student_no)`、`students(class_id, active, student_no)`、`sessions(started_at, id)`、`sessions(status)`、`sessions(class_id, started_at, id)`、`records(session_id, status, order_no)`、`records(session_id, order_no)`、`records(student_id)`、`users(role)`、`users(active)`。
 
 ---
 
@@ -180,12 +187,13 @@ database/.venv/bin/pytest database/tests -q
 
 测试会为每个用例创建临时 SQLite 文件，并执行真实 Alembic 迁移，覆盖：
 
-- 迁移到 `0005`、表/索引/`token_version` 存在；
+- 迁移到 `0007`、表/索引/`token_version`/`class_id` 存在；
 - `schema.sql` 可独立建库；
-- 学号长度/唯一、角色枚举、场次状态、`checked_at` 三态、记录唯一；
+- 旧库 `0005 → 0007` 默认班级回填；
+- 学号长度/唯一、角色枚举、班级编号唯一、场次状态、`checked_at` 三态、记录唯一；
 - 账号绑定与 `token_version` 非负；
-- 外键 `CASCADE/RESTRICT`；
-- Repository 的学生/场次/记录/账号流程与学生统计裁剪。
+- 外键 `CASCADE/RESTRICT`（班级/学生/场次）；
+- Repository 的班级/学生/场次/记录/账号流程与班级/本人统计裁剪。
 
 ---
 
@@ -207,7 +215,8 @@ mv database/teacher_treasure.backup.db database/teacher_treasure.db
 
 ## 9. 边界
 
-- MVP 为**单课堂**：`students` 与场次均不关联班级/专业。
+- MVP 为**多班级、单学生单班**：每个学生/场次必须归属一个 `class_id`；专业/课程管理为 P2。
+- 教师可跨班；班长/学生仅本班，班级范围由后端服务层强制。
 - 不保存明文密码；`password_hash` 仅由种子/后端认证服务写入。
 - `token_version` 为内部字段，不通过 API 返回；后端 `get_current_user` 校验 JWT 中的版本。
 - 学生删除为软删除；历史签到记录保留快照，账号同步禁用。

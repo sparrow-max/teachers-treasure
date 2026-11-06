@@ -1,6 +1,7 @@
 from .models import (
     AttendanceRecord,
     Base,
+    Classroom,
     RollcallSession,
     Student,
     User,
@@ -9,6 +10,7 @@ from .models import (
 __all__ = [
     "AttendanceRecord",
     "Base",
+    "Classroom",
     "RollcallSession",
     "Student",
     "User",

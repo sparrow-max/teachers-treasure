@@ -20,11 +20,13 @@ def create_session(
     db: Session,
     title: str,
     order_by: str,
+    class_id: int,
     started_at: datetime | None = None,
 ) -> RollcallSession:
     session = RollcallSession(
         title=title,
         order_by=order_by,
+        class_id=class_id,
         status=SESSION_CALLING,
         started_at=started_at or utcnow(),
     )
@@ -59,11 +61,15 @@ def finish_session(
 
 
 def _session_filters(
-    status: str | None, student_id: int | None
+    status: str | None,
+    student_id: int | None,
+    class_id: int | None,
 ) -> list:
     filters = []
     if status is not None:
         filters.append(RollcallSession.status == status)
+    if class_id is not None:
+        filters.append(RollcallSession.class_id == class_id)
     if student_id is not None:
         participation = (
             select(AttendanceRecord.id)
@@ -83,8 +89,9 @@ def list_sessions(
     page_size: int,
     status: str | None = None,
     student_id: int | None = None,
+    class_id: int | None = None,
 ) -> tuple[list[RollcallSession], int]:
-    filters = _session_filters(status, student_id)
+    filters = _session_filters(status, student_id, class_id)
     total = int(db.scalar(
         select(func.count(RollcallSession.id)).where(*filters)
     ) or 0)
