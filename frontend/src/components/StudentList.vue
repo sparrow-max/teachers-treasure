@@ -106,8 +106,13 @@ async function remove(student: Student): Promise<void> {
         :key="student.id"
         class="student-row student-grid"
       >
-        <span class="cell" data-label="姓名">{{ student.name }}</span>
-        <span class="cell" data-label="学号">{{ student.student_no }}</span>
+        <span class="cell name-cell" data-label="姓名">
+          <span class="row-avatar" aria-hidden="true">
+            {{ student.name.slice(0, 1) }}
+          </span>
+          <span class="name-text">{{ student.name }}</span>
+        </span>
+        <span class="cell mono" data-label="学号">{{ student.student_no }}</span>
         <span class="cell" data-label="角色">{{ student.role }}</span>
         <span class="cell" data-label="本次状态">
           <el-tag :type="statusInfo(student).type" size="small" effect="light">
@@ -133,6 +138,12 @@ async function remove(student: Student): Promise<void> {
 </template>
 
 <style scoped>
+.student-table {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+}
+
 .student-grid {
   display: grid;
   grid-template-columns: 1.3fr 1.4fr 0.8fr 1fr 0.7fr;
@@ -141,13 +152,16 @@ async function remove(student: Student): Promise<void> {
 }
 
 .student-head {
-  padding: 0 12px 8px;
+  padding: 11px 16px;
   border-bottom: 1px solid var(--color-border);
+  background: #f8faff;
 }
 
 .student-row {
-  padding: 12px;
+  padding: 11px 16px;
   border-bottom: 1px solid var(--color-border);
+  font-size: 13px;
+  transition: background 0.16s ease;
 }
 
 .student-row:last-child {
@@ -155,7 +169,37 @@ async function remove(student: Student): Promise<void> {
 }
 
 .student-row:hover {
-  background: #f8fafc;
+  background: #f6f8ff;
+}
+
+.name-cell {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-weight: 600;
+}
+
+.row-avatar {
+  display: grid;
+  flex: none;
+  width: 27px;
+  height: 27px;
+  place-items: center;
+  border-radius: 9px;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.name-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.mono {
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
 }
 
 .align-right {
@@ -168,16 +212,23 @@ async function remove(student: Student): Promise<void> {
 }
 
 @media (max-width: 767px) {
+  .student-table {
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+  }
+
   .student-head {
     display: none;
   }
 
   .student-row {
     display: block;
-    padding: 12px;
+    padding: 13px 14px;
     border: 1px solid var(--color-border);
-    border-radius: 10px;
+    border-radius: 12px;
     margin-bottom: 8px;
+    background: #fff;
   }
 
   .student-row:last-child {
@@ -193,11 +244,21 @@ async function remove(student: Student): Promise<void> {
     padding: 3px 0;
   }
 
+  .student-row .name-cell {
+    justify-content: flex-start;
+    padding-bottom: 6px;
+  }
+
   .student-row .cell::before {
     content: attr(data-label);
     flex: none;
-    color: var(--color-text-secondary);
-    font-size: 12px;
+    color: var(--color-text-muted);
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .student-row .name-cell::before {
+    display: none;
   }
 
   .row-actions {

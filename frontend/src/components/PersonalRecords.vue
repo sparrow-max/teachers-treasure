@@ -56,7 +56,7 @@ function statusType(status: RecordItem['status']): 'success' | 'danger' | 'warni
             {{ statusText(row.status) }}
           </el-tag>
         </span>
-        <span class="cell" data-label="时间">{{ formatDateTime(row.checked_at) }}</span>
+        <span class="cell mono" data-label="时间">{{ formatDateTime(row.checked_at) }}</span>
       </div>
     </div>
 
@@ -65,6 +65,12 @@ function statusType(status: RecordItem['status']): 'success' | 'danger' | 'warni
 </template>
 
 <style scoped>
+.personal-table {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+}
+
 .personal-grid {
   display: grid;
   grid-template-columns: 2fr 0.8fr 1.4fr;
@@ -73,31 +79,49 @@ function statusType(status: RecordItem['status']): 'success' | 'danger' | 'warni
 }
 
 .personal-head {
-  padding: 0 12px 8px;
+  padding: 11px 16px;
   border-bottom: 1px solid var(--color-border);
+  background: #f8faff;
 }
 
 .personal-row {
-  padding: 10px 12px;
+  padding: 10px 16px;
   border-bottom: 1px solid var(--color-border);
+  font-size: 13px;
   font-variant-numeric: tabular-nums;
+  transition: background 0.16s ease;
+}
+
+.personal-row:hover {
+  background: #f6f8ff;
 }
 
 .personal-row:last-child {
   border-bottom: 0;
 }
 
+.mono {
+  color: var(--color-text-secondary);
+}
+
 @media (max-width: 767px) {
+  .personal-table {
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+  }
+
   .personal-head {
     display: none;
   }
 
   .personal-row {
     display: block;
-    padding: 10px 12px;
+    padding: 12px 14px;
     border: 1px solid var(--color-border);
-    border-radius: 10px;
+    border-radius: 12px;
     margin-bottom: 8px;
+    background: #fff;
   }
 
   .personal-row:last-child {
@@ -116,8 +140,9 @@ function statusType(status: RecordItem['status']): 'success' | 'danger' | 'warni
   .personal-row .cell::before {
     content: attr(data-label);
     flex: none;
-    color: var(--color-text-secondary);
-    font-size: 12px;
+    color: var(--color-text-muted);
+    font-size: 11px;
+    font-weight: 600;
   }
 }
 </style>

@@ -82,14 +82,24 @@ async function submit(): Promise<void> {
 
     <main class="page">
       <section class="card password-card">
-        <div class="section-head">
-          <h1 class="section-title">修改密码</h1>
+        <div class="section-head password-head">
+          <div class="password-title-wrap">
+            <span class="password-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none">
+                <rect x="4.5" y="10" width="15" height="10" rx="3" stroke="currentColor" stroke-width="1.7" />
+                <path d="M8 10V7.5a4 4 0 018 0V10" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+                <circle cx="12" cy="15" r="1.4" fill="currentColor" />
+              </svg>
+            </span>
+            <div>
+              <h1 class="section-title">修改密码</h1>
+              <p class="password-tip">
+                {{ firstLogin ? '完成修改后需要使用新密码重新登录。' : '修改成功后需要重新登录。' }}
+              </p>
+            </div>
+          </div>
           <span v-if="firstLogin" class="section-hint">首次登录需修改初始密码</span>
         </div>
-
-        <p class="password-tip">
-          {{ firstLogin ? '完成修改后需要使用新密码重新登录。' : '修改成功后需要重新登录。' }}
-        </p>
 
         <form class="password-form" @submit.prevent="submit">
           <div class="field">
@@ -152,20 +162,49 @@ async function submit(): Promise<void> {
 
 <style scoped>
 .password-card {
-  max-width: 520px;
-  margin: 40px auto 0;
+  max-width: 560px;
+  margin: 32px auto 0;
+  padding: 28px 30px 30px;
+}
+
+.password-head {
+  align-items: flex-start;
+  margin-bottom: 22px;
+}
+
+.password-title-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+}
+
+.password-icon {
+  display: grid;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 13px;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
 }
 
 .password-tip {
-  margin: 0 0 20px;
+  margin: 4px 0 0;
   color: var(--color-text-secondary);
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .password-form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
+  padding: 20px;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background:
+    radial-gradient(420px 200px at 100% 0%, rgba(59, 91, 255, 0.06), transparent 70%),
+    #fbfcff;
 }
 
 .field {
@@ -176,8 +215,8 @@ async function submit(): Promise<void> {
 
 .field-label {
   color: var(--color-text-secondary);
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 11px;
+  font-weight: 600;
 }
 
 .field-error {
@@ -187,7 +226,8 @@ async function submit(): Promise<void> {
 }
 
 .field :deep(.el-input__wrapper) {
-  min-height: 40px;
+  min-height: 44px;
+  border-radius: 11px;
 }
 
 .is-invalid :deep(.el-input__wrapper) {
@@ -195,13 +235,30 @@ async function submit(): Promise<void> {
 }
 
 .password-submit {
-  height: 44px;
-  margin-top: 8px;
+  height: 46px;
+  margin-top: 6px;
+  border-radius: 12px;
+  --el-button-bg-color: #3b5bff;
+  --el-button-border-color: #3b5bff;
+  --el-button-hover-bg-color: #2440d8;
+  --el-button-hover-border-color: #2440d8;
+  font-weight: 700;
+  box-shadow: 0 14px 26px -12px rgba(59, 91, 255, 0.9);
 }
 
 @media (max-width: 767px) {
   .password-card {
-    margin-top: 16px;
+    margin-top: 8px;
+    padding: 20px 16px;
+  }
+
+  .password-head {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .password-form {
+    padding: 14px;
   }
 }
 </style>

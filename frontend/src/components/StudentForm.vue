@@ -174,9 +174,15 @@ async function submit(): Promise<void> {
 <style scoped>
 .student-form {
   display: grid;
-  grid-template-columns: 1.1fr 1.1fr 0.7fr 1.2fr auto;
-  gap: 12px;
+  grid-template-columns: 1.1fr 1.2fr 0.7fr 1.2fr auto;
+  gap: 14px;
   align-items: start;
+  padding: 18px;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background:
+    radial-gradient(420px 200px at 100% 0%, rgba(59, 91, 255, 0.06), transparent 70%),
+    #fbfcff;
 }
 
 .field {
@@ -188,8 +194,9 @@ async function submit(): Promise<void> {
 
 .field-label {
   color: var(--color-text-secondary);
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 .field-label--placeholder {
@@ -204,8 +211,8 @@ async function submit(): Promise<void> {
 
 .field-hint {
   margin: 0;
-  color: var(--color-text-secondary);
-  font-size: 12px;
+  color: var(--color-text-muted);
+  font-size: 11px;
 }
 
 .field :deep(.el-input),
@@ -215,21 +222,31 @@ async function submit(): Promise<void> {
 
 .field :deep(.el-select__wrapper),
 .field :deep(.el-input__wrapper) {
-  min-height: 40px;
+  min-height: 42px;
+  border-radius: 11px;
 }
 
-.is-invalid :deep(.el-input__wrapper) {
+.is-invalid :deep(.el-input__wrapper),
+.is-invalid :deep(.el-select__wrapper) {
   box-shadow: 0 0 0 1px var(--color-danger) inset;
 }
 
 .submit-button {
   min-width: 112px;
-  height: 40px;
+  height: 42px;
+  border-radius: 11px;
+  --el-button-bg-color: #3b5bff;
+  --el-button-border-color: #3b5bff;
+  --el-button-hover-bg-color: #2440d8;
+  --el-button-hover-border-color: #2440d8;
+  font-weight: 700;
+  box-shadow: 0 12px 22px -12px rgba(59, 91, 255, 0.9);
 }
 
 @media (max-width: 900px) {
   .student-form {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 14px;
   }
 
   .field-action {
@@ -242,7 +259,7 @@ async function submit(): Promise<void> {
 
   .submit-button {
     width: 100%;
-    height: 42px;
+    height: 44px;
   }
 }
 

@@ -37,10 +37,13 @@ const rows = computed(() =>
         :key="row.id"
         class="record-row record-grid fade-in"
       >
-        <span class="cell" data-label="姓名">{{ row.student_name }}</span>
+        <span class="cell name-cell" data-label="姓名">
+          <span class="absent-dot" aria-hidden="true"></span>
+          {{ row.student_name }}
+        </span>
         <span class="cell" data-label="角色">{{ row.role }}</span>
-        <span class="cell" data-label="学号">{{ row.student_no }}</span>
-        <span class="cell" data-label="记录时间">{{ formatDateTime(row.checked_at) }}</span>
+        <span class="cell mono" data-label="学号">{{ row.student_no }}</span>
+        <span class="cell mono" data-label="记录时间">{{ formatDateTime(row.checked_at) }}</span>
       </div>
     </div>
 
@@ -51,6 +54,12 @@ const rows = computed(() =>
 </template>
 
 <style scoped>
+.record-table {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+}
+
 .record-grid {
   display: grid;
   grid-template-columns: 1.2fr 0.8fr 1.2fr 1.4fr;
@@ -59,31 +68,67 @@ const rows = computed(() =>
 }
 
 .record-head {
-  padding: 0 12px 8px;
+  padding: 11px 16px;
   border-bottom: 1px solid var(--color-border);
+  background: #f8faff;
 }
 
 .record-row {
-  padding: 10px 12px;
+  padding: 10px 16px;
   border-bottom: 1px solid var(--color-border);
+  font-size: 13px;
   font-variant-numeric: tabular-nums;
+  transition: background 0.16s ease;
+}
+
+.record-row:hover {
+  background: #fff8f8;
 }
 
 .record-row:last-child {
   border-bottom: 0;
 }
 
+.name-cell {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-weight: 600;
+}
+
+.absent-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin-left: 7px;
+  margin-right: 7px;
+  border-radius: 50%;
+  background: var(--color-danger);
+  box-shadow: 0 0 0 4px var(--color-danger-soft);
+}
+
+.mono {
+  color: var(--color-text-secondary);
+}
+
 @media (max-width: 767px) {
+  .record-table {
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+  }
+
   .record-head {
     display: none;
   }
 
   .record-row {
     display: block;
-    padding: 10px 12px;
+    padding: 12px 14px;
     border: 1px solid var(--color-border);
-    border-radius: 10px;
+    border-radius: 12px;
     margin-bottom: 8px;
+    background: #fff;
   }
 
   .record-row:last-child {
@@ -99,11 +144,21 @@ const rows = computed(() =>
     padding: 3px 0;
   }
 
+  .record-row .name-cell {
+    justify-content: flex-start;
+    padding-bottom: 6px;
+  }
+
   .record-row .cell::before {
     content: attr(data-label);
     flex: none;
-    color: var(--color-text-secondary);
-    font-size: 12px;
+    color: var(--color-text-muted);
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .record-row .name-cell::before {
+    display: none;
   }
 }
 </style>

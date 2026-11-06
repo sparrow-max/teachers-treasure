@@ -88,6 +88,7 @@ onMounted(load)
     <main class="page">
       <div class="page-head">
         <div>
+          <span class="page-eyebrow">ARCHIVE · 点名档案</span>
           <h1 class="page-title">历史点名</h1>
           <p class="page-subtitle">
             {{
@@ -113,7 +114,7 @@ onMounted(load)
       <section class="card">
         <div class="section-head">
           <h2 class="section-title">场次列表</h2>
-          <span class="section-hint">共 {{ total }} 场</span>
+          <span class="section-count">共 {{ total }} 场</span>
         </div>
 
         <p v-if="loading" class="loading">加载中…</p>
@@ -149,12 +150,12 @@ onMounted(load)
                   {{ statusText(item.status) }}
                 </el-tag>
               </span>
-              <span class="cell" data-label="开始时间">{{ formatDateTime(item.started_at) }}</span>
-              <span class="cell" data-label="结束时间">{{ formatDateTime(item.ended_at) }}</span>
+              <span class="cell mono" data-label="开始时间">{{ formatDateTime(item.started_at) }}</span>
+              <span class="cell mono" data-label="结束时间">{{ formatDateTime(item.ended_at) }}</span>
               <template v-if="!isStudent">
-                <span class="cell" data-label="总人数">{{ item.total_count }}</span>
-                <span class="cell" data-label="已签到">{{ item.present_count }}</span>
-                <span class="cell" data-label="缺勤">{{ item.absent_count }}</span>
+                <span class="cell mono" data-label="总人数">{{ item.total_count }}</span>
+                <span class="cell mono count-present" data-label="已签到">{{ item.present_count }}</span>
+                <span class="cell mono count-absent" data-label="缺勤">{{ item.absent_count }}</span>
               </template>
             </button>
           </div>
@@ -188,6 +189,7 @@ onMounted(load)
 
       <div v-else-if="detail" class="drawer-body">
         <div class="detail-summary">
+          <div class="detail-glow" aria-hidden="true"></div>
           <h3 class="detail-title">{{ detail.session.title }}</h3>
           <p class="detail-meta">
             开始：{{ formatDateTime(detail.session.started_at) }}
@@ -220,13 +222,25 @@ onMounted(load)
 
 <style scoped>
 .page-subtitle {
-  margin: 4px 0 0;
+  margin: 6px 0 0;
   color: var(--color-text-secondary);
   font-size: 13px;
 }
 
 .status-filter {
-  width: 160px;
+  width: 170px;
+}
+
+.status-filter :deep(.el-select__wrapper) {
+  min-height: 42px;
+  border-radius: 11px;
+  background: #fff;
+}
+
+.history-table {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
 }
 
 .history-grid {
@@ -241,25 +255,28 @@ onMounted(load)
 }
 
 .history-head {
-  padding: 0 12px 8px;
+  padding: 11px 16px;
   border-bottom: 1px solid var(--color-border);
+  background: #f8faff;
 }
 
 .history-row {
   width: 100%;
-  padding: 12px;
+  padding: 13px 16px;
   border: 0;
   border-bottom: 1px solid var(--color-border);
   background: transparent;
   color: inherit;
   font: inherit;
+  font-size: 13px;
   text-align: left;
   cursor: pointer;
   font-variant-numeric: tabular-nums;
+  transition: background 0.16s ease;
 }
 
 .history-row:hover {
-  background: #f8fafc;
+  background: #f6f8ff;
 }
 
 .history-row:last-child {
@@ -267,13 +284,27 @@ onMounted(load)
 }
 
 .history-title {
-  font-weight: 500;
+  font-weight: 600;
+}
+
+.mono {
+  color: var(--color-text-secondary);
+}
+
+.count-present {
+  color: var(--color-success);
+  font-weight: 700;
+}
+
+.count-absent {
+  color: var(--color-danger);
+  font-weight: 700;
 }
 
 .pagination {
   display: flex;
   justify-content: flex-end;
-  margin-top: 16px;
+  margin-top: 18px;
 }
 
 .drawer-body {
@@ -283,30 +314,47 @@ onMounted(load)
 }
 
 .detail-summary {
-  padding: 16px;
-  border-radius: 10px;
-  background: var(--color-primary-soft);
+  position: relative;
+  overflow: hidden;
+  padding: 22px 24px;
+  border-radius: 18px;
+  background: var(--gradient-ink);
+  color: #fff;
+}
+
+.detail-glow {
+  position: absolute;
+  top: -100px;
+  right: -40px;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(124, 140, 255, 0.5), transparent 66%);
+  pointer-events: none;
 }
 
 .detail-title {
+  position: relative;
   margin: 0 0 8px;
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 19px;
+  font-weight: 700;
 }
 
 .detail-meta {
+  position: relative;
   margin: 2px 0;
-  color: var(--color-text-secondary);
+  color: rgba(255, 255, 255, 0.58);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
 
 .detail-stats {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 16px;
-  margin-top: 10px;
-  color: var(--color-primary);
+  gap: 8px 18px;
+  margin-top: 14px;
+  color: #8ff0d2;
   font-size: 12px;
   font-weight: 600;
 }
@@ -321,6 +369,12 @@ onMounted(load)
     width: 100%;
   }
 
+  .history-table {
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+  }
+
   .history-head {
     display: none;
   }
@@ -328,10 +382,11 @@ onMounted(load)
   .history-row,
   .history-grid--student {
     display: block;
-    padding: 12px;
+    padding: 12px 14px;
     border: 1px solid var(--color-border);
-    border-radius: 10px;
+    border-radius: 12px;
     margin-bottom: 8px;
+    background: #fff;
   }
 
   .history-row:last-child {
@@ -350,8 +405,9 @@ onMounted(load)
   .history-row .cell::before {
     content: attr(data-label);
     flex: none;
-    color: var(--color-text-secondary);
-    font-size: 12px;
+    color: var(--color-text-muted);
+    font-size: 11px;
+    font-weight: 600;
   }
 
   .pagination {

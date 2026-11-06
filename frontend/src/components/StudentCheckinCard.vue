@@ -122,7 +122,7 @@ async function handleCheckin(): Promise<void> {
 </script>
 
 <template>
-  <section class="card">
+  <section class="card checkin-card">
     <div class="section-head">
       <h2 class="section-title">我的点名</h2>
       <span class="status-badge" :class="`status-${state}`">
@@ -132,6 +132,8 @@ async function handleCheckin(): Promise<void> {
     </div>
 
     <div v-if="session" class="my-session">
+      <div class="my-session-glow" aria-hidden="true"></div>
+
       <div class="my-session-head">
         <div>
           <div class="my-session-title">{{ session.title }}</div>
@@ -149,8 +151,13 @@ async function handleCheckin(): Promise<void> {
       </div>
 
       <div v-if="myRecord" class="my-identity">
-        <div class="my-name">{{ myRecord.student_name }}</div>
-        <div class="my-sub">{{ myRecord.student_no }} · {{ myRecord.role }}</div>
+        <span class="my-avatar" aria-hidden="true">
+          {{ myRecord.student_name.slice(0, 1) }}
+        </span>
+        <span class="my-identity-copy">
+          <span class="my-name">{{ myRecord.student_name }}</span>
+          <span class="my-sub">{{ myRecord.student_no }} · {{ myRecord.role }}</span>
+        </span>
       </div>
       <p v-else class="empty">你不在本次点名名单中</p>
 
@@ -170,6 +177,7 @@ async function handleCheckin(): Promise<void> {
           :loading="checking"
           :disabled="!canCheckin"
           class="my-checkin-button"
+          :class="{ 'my-checkin-button--done': myRecord.status === 'present' }"
           @click="handleCheckin"
         >
           {{ buttonText }}
@@ -196,7 +204,7 @@ async function handleCheckin(): Promise<void> {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
+  padding: 4px 11px;
   border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
@@ -211,7 +219,7 @@ async function handleCheckin(): Promise<void> {
 
 .status-idle {
   background: #f1f5f9;
-  color: #475569;
+  color: #64748b;
 }
 
 .status-calling {
@@ -229,12 +237,29 @@ async function handleCheckin(): Promise<void> {
 }
 
 .my-session {
-  padding: 20px;
-  border-radius: 12px;
-  background: var(--color-primary-soft);
+  position: relative;
+  overflow: hidden;
+  padding: 22px 24px;
+  border: 1px solid #d9dfff;
+  border-radius: 20px;
+  background:
+    radial-gradient(420px 220px at 100% 0%, rgba(18, 185, 129, 0.16), transparent 68%),
+    linear-gradient(135deg, #f7f9ff 0%, #eef1ff 100%);
+}
+
+.my-session-glow {
+  position: absolute;
+  top: -120px;
+  right: -60px;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(59, 91, 255, 0.16), transparent 66%);
+  pointer-events: none;
 }
 
 .my-session-head {
+  position: relative;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -242,8 +267,9 @@ async function handleCheckin(): Promise<void> {
 }
 
 .my-session-title {
-  font-size: 16px;
-  font-weight: 600;
+  color: var(--color-text);
+  font-size: 17px;
+  font-weight: 700;
 }
 
 .my-session-meta {
@@ -254,25 +280,55 @@ async function handleCheckin(): Promise<void> {
 }
 
 .my-identity {
-  margin-top: 18px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.my-avatar {
+  display: grid;
+  flex: none;
+  width: 52px;
+  height: 52px;
+  place-items: center;
+  border-radius: 16px;
+  background: var(--gradient-primary);
+  box-shadow: 0 14px 26px -14px rgba(59, 91, 255, 0.9);
+  color: #fff;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.my-identity-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
 }
 
 .my-name {
-  font-size: 24px;
-  font-weight: 700;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
 }
 
 .my-sub {
   color: var(--color-text-secondary);
   font-size: 13px;
+  font-variant-numeric: tabular-nums;
 }
 
 .my-actions {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-top: 20px;
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px dashed #c8d0ec;
 }
 
 .my-hint {
@@ -281,8 +337,27 @@ async function handleCheckin(): Promise<void> {
 }
 
 .my-checkin-button {
-  min-width: 128px;
-  height: 44px;
+  min-width: 148px;
+  height: 48px;
+  border-radius: 13px;
+  --el-button-bg-color: #3b5bff;
+  --el-button-border-color: #3b5bff;
+  --el-button-hover-bg-color: #2440d8;
+  --el-button-hover-border-color: #2440d8;
+  font-size: 15px;
+  font-weight: 700;
+  box-shadow: 0 16px 30px -14px rgba(59, 91, 255, 0.95);
+}
+
+.my-checkin-button--done,
+.my-checkin-button--done.is-disabled {
+  --el-button-bg-color: #e7f9f2;
+  --el-button-border-color: #b7ebd7;
+  --el-button-disabled-bg-color: #e7f9f2;
+  --el-button-disabled-border-color: #b7ebd7;
+  --el-button-disabled-text-color: #0d9467;
+  box-shadow: none;
+  color: #0d9467;
 }
 
 @keyframes pulse {
@@ -297,12 +372,16 @@ async function handleCheckin(): Promise<void> {
 
 @media (max-width: 767px) {
   .my-session {
-    padding: 16px;
+    padding: 18px 16px;
   }
 
   .my-session-head {
     flex-direction: column;
     gap: 8px;
+  }
+
+  .my-name {
+    font-size: 22px;
   }
 
   .my-actions {
