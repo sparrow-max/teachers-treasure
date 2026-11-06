@@ -27,7 +27,22 @@ def main() -> None:
                 select(Student).where(Student.student_no == student_no)
             )
             if existing is not None:
-                print(f"skip existing student {student_no} ({name})")
+                if user_repo.username_exists(db, student_no):
+                    print(f"skip existing student {student_no} ({name})")
+                    continue
+                user_repo.create_user(
+                    db,
+                    username=student_no,
+                    password_hash=hash_password(student_no),
+                    role=system_role,
+                    display_name=name,
+                    student_id=existing.id,
+                    must_change_password=True,
+                )
+                print(
+                    f"created missing account for existing student {student_no} "
+                    f"({name}); login {student_no} / initial password {student_no}"
+                )
                 continue
 
             student = Student(

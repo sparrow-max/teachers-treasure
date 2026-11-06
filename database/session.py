@@ -7,7 +7,8 @@ from contextlib import contextmanager
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 
-DEFAULT_DATABASE_URL = "sqlite:///./database/teacher_treasure.db"
+from database.config import DEFAULT_DATABASE_URL
+
 DATABASE_URL = os.getenv("DATABASE_URL", DEFAULT_DATABASE_URL)
 
 _IS_SQLITE = DATABASE_URL.startswith("sqlite")

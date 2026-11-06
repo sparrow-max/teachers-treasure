@@ -6,6 +6,7 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
+from database.config import DEFAULT_DATABASE_URL
 from database.models import Base
 
 config = context.config
@@ -17,7 +18,7 @@ target_metadata = Base.metadata
 
 
 def _database_url() -> str:
-    return os.getenv("DATABASE_URL") or config.get_main_option("sqlalchemy.url")
+    return os.getenv("DATABASE_URL") or DEFAULT_DATABASE_URL
 
 
 def run_migrations_offline() -> None:

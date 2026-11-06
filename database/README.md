@@ -23,6 +23,7 @@
 ```text
 database/
 ├── models.py                 # 4 张表的 ORM 模型与约束
+├── config.py                 # 默认数据库绝对路径
 ├── session.py                # engine、SessionLocal、get_db、session_scope
 ├── schema.sql                # SQLite 权威 DDL（与迁移结果一致）
 ├── alembic.ini
@@ -75,7 +76,7 @@ SEED_TEACHER_PASSWORD='Teacher@123' \
 database/.venv/bin/python -m database.seeds.seed_demo
 ```
 
-默认数据库路径：`database/teacher_treasure.db`（已被 `.gitignore` 忽略，不提交）。
+默认数据库路径：`database/teacher_treasure.db`（由 `database/config.py` 解析为绝对路径，任意工作目录均可访问；已被 `.gitignore` 忽略，不提交）。
 
 ### 演示账号
 

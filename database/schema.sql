@@ -1,7 +1,7 @@
 PRAGMA foreign_keys = ON;
 
 CREATE TABLE students (
-    id          INTEGER PRIMARY KEY,
+    id          INTEGER NOT NULL PRIMARY KEY,
     student_no  VARCHAR(32) NOT NULL,
     name        VARCHAR(32) NOT NULL,
     role        VARCHAR(16) NOT NULL DEFAULT '学生',
@@ -17,7 +17,7 @@ CREATE TABLE students (
 CREATE INDEX idx_students_active_no ON students (active, student_no);
 
 CREATE TABLE rollcall_sessions (
-    id          INTEGER PRIMARY KEY,
+    id          INTEGER NOT NULL PRIMARY KEY,
     title       VARCHAR(64) NOT NULL,
     status      VARCHAR(16) NOT NULL DEFAULT 'calling',
     order_by    VARCHAR(16) NOT NULL DEFAULT 'student_no',
@@ -39,7 +39,7 @@ CREATE INDEX idx_sessions_started ON rollcall_sessions (started_at, id);
 CREATE INDEX idx_sessions_status ON rollcall_sessions (status);
 
 CREATE TABLE attendance_records (
-    id            INTEGER PRIMARY KEY,
+    id            INTEGER NOT NULL PRIMARY KEY,
     session_id    INTEGER NOT NULL,
     student_id    INTEGER NOT NULL,
     student_no    VARCHAR(32) NOT NULL,
@@ -75,7 +75,7 @@ CREATE INDEX idx_records_student
     ON attendance_records (student_id);
 
 CREATE TABLE users (
-    id                    INTEGER PRIMARY KEY,
+    id                    INTEGER NOT NULL PRIMARY KEY,
     username              VARCHAR(32) NOT NULL,
     password_hash         VARCHAR(255) NOT NULL,
     role                  VARCHAR(16) NOT NULL,
