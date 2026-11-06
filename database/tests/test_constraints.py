@@ -3,11 +3,12 @@ from __future__ import annotations
 from datetime import timedelta
 
 import pytest
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
 
 from database.models import (
     AttendanceRecord,
+    Classroom,
     RollcallSession,
     Student,
     User,
@@ -15,15 +16,33 @@ from database.models import (
 )
 
 
-def add_student(db, student_no="20230001", name="张三", role="学生"):
-    student = Student(student_no=student_no, name=name, role=role)
+def add_class(db, code="TEST", name="测试班"):
+    existing = db.scalar(select(Classroom).where(Classroom.code == code))
+    if existing is not None:
+        return existing
+    classroom = Classroom(name=name, code=code)
+    db.add(classroom)
+    db.flush()
+    return classroom
+
+
+def add_student(
+    db, student_no="20230001", name="张三", role="学生", class_id=None
+):
+    if class_id is None:
+        class_id = add_class(db).id
+    student = Student(
+        student_no=student_no, name=name, role=role, class_id=class_id
+    )
     db.add(student)
     db.flush()
     return student
 
 
-def add_session(db, title="课堂点名"):
-    session = RollcallSession(title=title)
+def add_session(db, title="课堂点名", class_id=None):
+    if class_id is None:
+        class_id = add_class(db).id
+    session = RollcallSession(title=title, class_id=class_id)
     db.add(session)
     db.flush()
     return session
@@ -242,6 +261,42 @@ def test_foreign_key_cascade_and_restrict(db_session) -> None:
     with pytest.raises(IntegrityError):
         db_session.execute(
             text("DELETE FROM students WHERE id = :id"), {"id": student.id}
+        )
+        db_session.commit()
+    db_session.rollback()
+
+
+def test_class_code_is_unique(db_session) -> None:
+    add_class(db_session, code="C-001", name="一班")
+    with pytest.raises(IntegrityError):
+        db_session.add(Classroom(name="重复编号", code="C-001"))
+        db_session.flush()
+    db_session.rollback()
+
+
+def test_class_id_is_required(db_session) -> None:
+    with pytest.raises(IntegrityError):
+        db_session.add(
+            Student(student_no="20230001", name="张三", role="学生")
+        )
+        db_session.flush()
+    db_session.rollback()
+
+    with pytest.raises(IntegrityError):
+        db_session.add(RollcallSession(title="无班级场次"))
+        db_session.flush()
+    db_session.rollback()
+
+
+def test_class_delete_is_restricted_by_students(db_session) -> None:
+    classroom = add_class(db_session, code="C-002", name="二班")
+    add_student(db_session, class_id=classroom.id)
+    db_session.commit()
+
+    with pytest.raises(IntegrityError):
+        db_session.execute(
+            text("DELETE FROM classes WHERE id = :id"),
+            {"id": classroom.id},
         )
         db_session.commit()
     db_session.rollback()

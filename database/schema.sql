@@ -1,13 +1,30 @@
 PRAGMA foreign_keys = ON;
 
+CREATE TABLE classes (
+    id          INTEGER NOT NULL PRIMARY KEY,
+    name        VARCHAR(32) NOT NULL,
+    code        VARCHAR(32) NOT NULL,
+    active      BOOLEAN NOT NULL DEFAULT 1,
+    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uk_classes_code UNIQUE (code),
+    CONSTRAINT ck_classes_name_len CHECK (length(name) BETWEEN 1 AND 32),
+    CONSTRAINT ck_classes_code_len CHECK (length(code) BETWEEN 1 AND 32)
+);
+
+CREATE INDEX idx_classes_active_code ON classes (active, code);
+
 CREATE TABLE students (
     id          INTEGER NOT NULL PRIMARY KEY,
+    class_id    INTEGER NOT NULL,
     student_no  VARCHAR(32) NOT NULL,
     name        VARCHAR(32) NOT NULL,
     role        VARCHAR(16) NOT NULL DEFAULT '学生',
     active      BOOLEAN NOT NULL DEFAULT 1,
     created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_students_class FOREIGN KEY (class_id)
+        REFERENCES classes (id) ON DELETE RESTRICT,
     CONSTRAINT uk_students_student_no UNIQUE (student_no),
     CONSTRAINT ck_students_role CHECK (role IN ('学生', '班长', '教师')),
     CONSTRAINT ck_students_no_len CHECK (length(student_no) BETWEEN 6 AND 32),
@@ -15,9 +32,12 @@ CREATE TABLE students (
 );
 
 CREATE INDEX idx_students_active_no ON students (active, student_no);
+CREATE INDEX idx_students_class_active_no
+    ON students (class_id, active, student_no);
 
 CREATE TABLE rollcall_sessions (
     id          INTEGER NOT NULL PRIMARY KEY,
+    class_id    INTEGER NOT NULL,
     title       VARCHAR(64) NOT NULL,
     status      VARCHAR(16) NOT NULL DEFAULT 'calling',
     order_by    VARCHAR(16) NOT NULL DEFAULT 'student_no',
@@ -25,6 +45,8 @@ CREATE TABLE rollcall_sessions (
     ended_at    DATETIME,
     created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_sessions_class FOREIGN KEY (class_id)
+        REFERENCES classes (id) ON DELETE RESTRICT,
     CONSTRAINT ck_sessions_status CHECK (status IN ('calling', 'ended')),
     CONSTRAINT ck_sessions_order_by CHECK (order_by IN ('student_no', 'name', 'id')),
     CONSTRAINT ck_sessions_title_len CHECK (length(title) BETWEEN 1 AND 64),
@@ -37,6 +59,8 @@ CREATE TABLE rollcall_sessions (
 
 CREATE INDEX idx_sessions_started ON rollcall_sessions (started_at, id);
 CREATE INDEX idx_sessions_status ON rollcall_sessions (status);
+CREATE INDEX idx_sessions_class_started
+    ON rollcall_sessions (class_id, started_at, id);
 
 CREATE TABLE attendance_records (
     id            INTEGER NOT NULL PRIMARY KEY,

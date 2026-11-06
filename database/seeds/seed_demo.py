@@ -9,9 +9,12 @@ from database.models import (
     SYSTEM_ROLE_STUDENT,
     Student,
 )
-from database.repositories import user_repo
+from database.repositories import class_repo, user_repo
 from database.seeds._hash import hash_password
 from database.session import session_scope
+
+DEMO_CLASS_CODE = "2023-1"
+DEMO_CLASS_NAME = "2023级1班"
 
 DEMO_STUDENTS = (
     ("20230001", "张三", ROLE_STUDENT, SYSTEM_ROLE_STUDENT),
@@ -22,11 +25,29 @@ DEMO_STUDENTS = (
 
 def main() -> None:
     with session_scope() as db:
+        classroom = class_repo.get_class_by_code(db, DEMO_CLASS_CODE)
+        if classroom is None:
+            classroom = class_repo.create_class(
+                db, DEMO_CLASS_NAME, DEMO_CLASS_CODE
+            )
+            print(
+                f"created class {DEMO_CLASS_CODE} ({DEMO_CLASS_NAME})"
+            )
+        else:
+            print(f"use existing class {DEMO_CLASS_CODE}")
+
         for student_no, name, roster_role, system_role in DEMO_STUDENTS:
             existing = db.scalar(
                 select(Student).where(Student.student_no == student_no)
             )
             if existing is not None:
+                if existing.class_id != classroom.id:
+                    existing.class_id = classroom.id
+                    db.flush()
+                    print(
+                        f"moved demo student {student_no} ({name}) "
+                        f"to class {DEMO_CLASS_CODE}"
+                    )
                 if user_repo.username_exists(db, student_no):
                     print(f"skip existing student {student_no} ({name})")
                     continue
@@ -46,7 +67,8 @@ def main() -> None:
                 continue
 
             student = Student(
-                student_no=student_no, name=name, role=roster_role
+                student_no=student_no, name=name, role=roster_role,
+                class_id=classroom.id,
             )
             db.add(student)
             db.flush()

@@ -3,29 +3,35 @@ from __future__ import annotations
 from datetime import datetime
 
 from sqlalchemy import func, select, update
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
-from database.models import User, utcnow
+from database.models import Student, User, utcnow
+
+
+def _user_stmt():
+    return select(User).options(
+        selectinload(User.student).selectinload(Student.classroom)
+    )
 
 
 def get_active_user_by_username(
     db: Session, username: str
 ) -> User | None:
     return db.scalar(
-        select(User).where(
+        _user_stmt().where(
             User.username == username, User.active.is_(True)
         )
     )
 
 
 def get_user_by_username(db: Session, username: str) -> User | None:
-    return db.scalar(select(User).where(User.username == username))
+    return db.scalar(_user_stmt().where(User.username == username))
 
 
 def get_user_by_id(
     db: Session, user_id: int, active_only: bool = True
 ) -> User | None:
-    stmt = select(User).where(User.id == user_id)
+    stmt = _user_stmt().where(User.id == user_id)
     if active_only:
         stmt = stmt.where(User.active.is_(True))
     return db.scalar(stmt)

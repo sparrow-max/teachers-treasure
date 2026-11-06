@@ -50,10 +50,44 @@ class Base(DeclarativeBase):
     pass
 
 
+class Classroom(Base):
+    __tablename__ = "classes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(32), nullable=False)
+    code: Mapped[str] = mapped_column(String(32), nullable=False)
+    active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=text("1")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utcnow,
+        server_default=func.current_timestamp(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow,
+        server_default=func.current_timestamp(),
+    )
+
+    students: Mapped[list["Student"]] = relationship(back_populates="classroom")
+    sessions: Mapped[list["RollcallSession"]] = relationship(
+        back_populates="classroom"
+    )
+
+    __table_args__ = (
+        UniqueConstraint("code", name="uk_classes_code"),
+        CheckConstraint("length(name) BETWEEN 1 AND 32", name="ck_classes_name_len"),
+        CheckConstraint("length(code) BETWEEN 1 AND 32", name="ck_classes_code_len"),
+        Index("idx_classes_active_code", "active", "code"),
+    )
+
+
 class Student(Base):
     __tablename__ = "students"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    class_id: Mapped[int] = mapped_column(
+        ForeignKey("classes.id", ondelete="RESTRICT"), nullable=False
+    )
     student_no: Mapped[str] = mapped_column(String(32), nullable=False)
     name: Mapped[str] = mapped_column(String(32), nullable=False)
     role: Mapped[str] = mapped_column(
@@ -73,6 +107,7 @@ class Student(Base):
 
     records: Mapped[list["AttendanceRecord"]] = relationship(back_populates="student")
     user: Mapped[Optional["User"]] = relationship(back_populates="student", uselist=False)
+    classroom: Mapped["Classroom"] = relationship(back_populates="students")
 
     __table_args__ = (
         UniqueConstraint("student_no", name="uk_students_student_no"),
@@ -80,6 +115,10 @@ class Student(Base):
         CheckConstraint("length(student_no) BETWEEN 6 AND 32", name="ck_students_no_len"),
         CheckConstraint("length(name) BETWEEN 1 AND 32", name="ck_students_name_len"),
         Index("idx_students_active_no", "active", "student_no"),
+        Index(
+            "idx_students_class_active_no",
+            "class_id", "active", "student_no",
+        ),
     )
 
 
@@ -87,6 +126,9 @@ class RollcallSession(Base):
     __tablename__ = "rollcall_sessions"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    class_id: Mapped[int] = mapped_column(
+        ForeignKey("classes.id", ondelete="RESTRICT"), nullable=False
+    )
     title: Mapped[str] = mapped_column(String(64), nullable=False)
     status: Mapped[str] = mapped_column(
         String(16), nullable=False, default=SESSION_CALLING, server_default=text("'calling'")
@@ -112,6 +154,7 @@ class RollcallSession(Base):
     records: Mapped[list["AttendanceRecord"]] = relationship(
         back_populates="session", cascade="all, delete-orphan", passive_deletes=True
     )
+    classroom: Mapped["Classroom"] = relationship(back_populates="sessions")
 
     __table_args__ = (
         CheckConstraint("status IN ('calling', 'ended')", name="ck_sessions_status"),
@@ -127,6 +170,7 @@ class RollcallSession(Base):
         ),
         Index("idx_sessions_started", "started_at", "id"),
         Index("idx_sessions_status", "status"),
+        Index("idx_sessions_class_started", "class_id", "started_at", "id"),
     )
 
 
