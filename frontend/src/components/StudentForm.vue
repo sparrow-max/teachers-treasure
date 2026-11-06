@@ -6,27 +6,33 @@ import { ApiError } from '@/api/error'
 import { useStudentStore } from '@/stores/student'
 import { notifyError } from '@/utils/notify'
 
-import type { Role } from '@/types/api'
+import type { StudentRole } from '@/types/api'
 
 const studentStore = useStudentStore()
 
 const form = reactive({
   name: '',
   student_no: '',
-  role: '学生' as Role,
+  role: '学生' as StudentRole,
+  initial_password: '',
 })
 
-const roles: Role[] = ['学生', '班长', '教师']
+const roles: StudentRole[] = ['学生', '班长']
 const submitting = ref(false)
 const nameError = ref('')
 const studentNoError = ref('')
+const roleError = ref('')
+const passwordError = ref('')
 
 function validate(): boolean {
   nameError.value = ''
   studentNoError.value = ''
+  roleError.value = ''
+  passwordError.value = ''
 
   const name = form.name.trim()
   const studentNo = form.student_no.trim()
+  const password = form.initial_password
 
   if (!name) {
     nameError.value = '请输入姓名'
@@ -42,7 +48,18 @@ function validate(): boolean {
     studentNoError.value = '学号仅支持字母、数字、下划线和短横线'
   }
 
-  return !nameError.value && !studentNoError.value
+  if (password && (password.length < 6 || password.length > 32)) {
+    passwordError.value = '初始密码需为 6–32 位'
+  } else if (!password && studentNo.length > 0 && studentNo.length < 6) {
+    passwordError.value = '学号少于 6 位时，请填写 6–32 位初始密码'
+  }
+
+  return (
+    !nameError.value &&
+    !studentNoError.value &&
+    !roleError.value &&
+    !passwordError.value
+  )
 }
 
 async function submit(): Promise<void> {
@@ -56,13 +73,23 @@ async function submit(): Promise<void> {
       name: form.name.trim(),
       student_no: form.student_no.trim(),
       role: form.role,
+      initial_password: form.initial_password || undefined,
     })
     form.name = ''
     form.student_no = ''
-    ElMessage.success('添加成功')
+    form.initial_password = ''
+    ElMessage.success('添加成功，学生账号已开通，首次登录需修改密码')
   } catch (error) {
     if (error instanceof ApiError && error.code === 40901) {
       studentNoError.value = '该学号已存在'
+      return
+    }
+    if (error instanceof ApiError && error.code === 40906) {
+      studentNoError.value = '账号用户名冲突，请更换学号'
+      return
+    }
+    if (error instanceof ApiError && error.code === 40907) {
+      roleError.value = error.message
       return
     }
     notifyError(error)
@@ -76,7 +103,7 @@ async function submit(): Promise<void> {
   <section class="card">
     <div class="section-head">
       <h2 class="section-title">添加学生</h2>
-      <span class="section-hint">学号全局唯一，删除后不可复用</span>
+      <span class="section-hint">添加后自动开通账号，首次登录需修改密码</span>
     </div>
 
     <form class="student-form" @submit.prevent="submit">
@@ -100,10 +127,11 @@ async function submit(): Promise<void> {
           v-model="form.student_no"
           :class="{ 'is-invalid': studentNoError }"
           maxlength="32"
-          placeholder="如 20230001"
+          placeholder="如 20230001，学号同时作为登录用户名"
           clearable
         />
         <p v-if="studentNoError" class="field-error">{{ studentNoError }}</p>
+        <p class="field-hint">姓名允许重名，学号唯一</p>
       </div>
 
       <div class="field">
@@ -111,6 +139,21 @@ async function submit(): Promise<void> {
         <el-select v-model="form.role" class="w-full">
           <el-option v-for="role in roles" :key="role" :label="role" :value="role" />
         </el-select>
+        <p v-if="roleError" class="field-error">{{ roleError }}</p>
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="initial-password">初始密码</label>
+        <el-input
+          id="initial-password"
+          v-model="form.initial_password"
+          type="password"
+          show-password
+          maxlength="32"
+          :class="{ 'is-invalid': passwordError }"
+          placeholder="可选，留空默认等于学号"
+        />
+        <p v-if="passwordError" class="field-error">{{ passwordError }}</p>
       </div>
 
       <div class="field field-action">
@@ -131,7 +174,7 @@ async function submit(): Promise<void> {
 <style scoped>
 .student-form {
   display: grid;
-  grid-template-columns: 1.2fr 1.2fr 0.8fr auto;
+  grid-template-columns: 1.1fr 1.1fr 0.7fr 1.2fr auto;
   gap: 12px;
   align-items: start;
 }
@@ -159,6 +202,12 @@ async function submit(): Promise<void> {
   font-size: 12px;
 }
 
+.field-hint {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
 .field :deep(.el-input),
 .field :deep(.el-select) {
   width: 100%;
@@ -178,7 +227,7 @@ async function submit(): Promise<void> {
   height: 40px;
 }
 
-@media (max-width: 767px) {
+@media (max-width: 900px) {
   .student-form {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

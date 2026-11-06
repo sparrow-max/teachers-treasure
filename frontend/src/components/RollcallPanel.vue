@@ -13,7 +13,6 @@ const studentStore = useStudentStore()
 
 const starting = ref(false)
 const ending = ref(false)
-const checking = ref(false)
 const carouselIndex = ref(0)
 let carouselTimer: number | null = null
 
@@ -44,26 +43,6 @@ const currentRecord = computed(() =>
   records.value.length ? records.value[currentIndex.value] : null,
 )
 const currentPosition = computed(() => currentIndex.value + 1)
-
-const canCheckin = computed(
-  () =>
-    state.value === 'calling' &&
-    currentRecord.value?.status === 'pending',
-)
-
-const checkinText = computed(() => {
-  const record = currentRecord.value
-  if (!record) {
-    return '签到'
-  }
-  if (record.status === 'present') {
-    return '已签到'
-  }
-  if (record.status === 'absent') {
-    return '缺勤'
-  }
-  return '签到'
-})
 
 function stopCarousel(): void {
   if (carouselTimer !== null) {
@@ -174,37 +153,6 @@ async function handleEnd(): Promise<void> {
     ending.value = false
   }
 }
-
-async function handleCheckin(): Promise<void> {
-  const record = currentRecord.value
-  if (!record || checking.value) {
-    return
-  }
-
-  checking.value = true
-  try {
-    await rollcallStore.checkin(record.student_id)
-    ElMessage.success(`「${record.student_name}」签到成功`)
-  } catch (error) {
-    if (error instanceof ApiError) {
-      if (error.code === 40902) {
-        ElMessage.warning('该学生已签到')
-      } else if (error.code === 40903) {
-        ElMessage.warning('点名已结束')
-        await refreshSafely()
-      } else if (error.code === 40402) {
-        ElMessage.warning('场次不存在，已重置')
-        rollcallStore.reset()
-      } else {
-        notifyError(error)
-      }
-    } else {
-      notifyError(error)
-    }
-  } finally {
-    checking.value = false
-  }
-}
 </script>
 
 <template>
@@ -263,17 +211,7 @@ async function handleCheckin(): Promise<void> {
           {{ currentRecord.student_no }} · {{ currentRecord.role }}
         </div>
       </div>
-
-      <el-button
-        type="primary"
-        size="large"
-        class="checkin-button"
-        :loading="checking"
-        :disabled="!canCheckin"
-        @click="handleCheckin"
-      >
-        {{ checkinText }}
-      </el-button>
+      <span class="current-state">点名中</span>
     </div>
 
     <p v-else-if="state === 'calling'" class="empty">当前场次暂无学生记录</p>
@@ -393,9 +331,14 @@ async function handleCheckin(): Promise<void> {
   font-size: 13px;
 }
 
-.checkin-button {
-  min-width: 112px;
-  height: 44px;
+.current-state {
+  flex: none;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(47, 107, 255, 0.12);
+  color: var(--color-primary);
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .ended-card {
@@ -449,8 +392,8 @@ async function handleCheckin(): Promise<void> {
     align-items: flex-start;
   }
 
-  .checkin-button {
-    width: 100%;
+  .current-state {
+    align-self: flex-start;
   }
 
   .ended-card {

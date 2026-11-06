@@ -5,6 +5,7 @@ import {
   checkin as apiCheckin,
   endRollcall as apiEndRollcall,
   getRollcall,
+  listRollcalls,
   startRollcall as apiStartRollcall,
 } from '@/api/rollcalls'
 
@@ -56,6 +57,10 @@ function readStoredSessionId(): number | null {
   return sessionId
 }
 
+function storeSessionId(sessionId: number): void {
+  sessionStorage.setItem(SESSION_KEY, String(sessionId))
+}
+
 export const useRollcallStore = defineStore('rollcall', {
   state: () => ({
     current: null as SessionDetail | null,
@@ -86,7 +91,7 @@ export const useRollcallStore = defineStore('rollcall', {
       const detail = await apiStartRollcall(payload)
       this.current = detail
       this.recomputeCounts()
-      sessionStorage.setItem(SESSION_KEY, String(detail.session.id))
+      storeSessionId(detail.session.id)
       this.startPolling()
       return detail
     },
@@ -114,15 +119,66 @@ export const useRollcallStore = defineStore('rollcall', {
       }
     },
 
-    async checkin(studentId: number) {
+    async ensureCurrentSession() {
+      const restored = await this.restoreRollcall()
+      if (restored) {
+        return restored
+      }
+
+      const page = await listRollcalls({
+        page: 1,
+        page_size: 1,
+        status: 'calling',
+      })
+      if (!page.items.length) {
+        return null
+      }
+
+      const detail = await getRollcall(page.items[0].id)
+      this.current = detail
+      this.recomputeCounts()
+      this.startPolling()
+      return detail
+    },
+
+    async fetchCurrentSession() {
+      const calling = await listRollcalls({
+        page: 1,
+        page_size: 1,
+        status: 'calling',
+      })
+      if (calling.items.length) {
+        const detail = await getRollcall(calling.items[0].id)
+        this.current = detail
+        this.recomputeCounts()
+        this.startPolling()
+        return detail
+      }
+
+      const ended = await listRollcalls({
+        page: 1,
+        page_size: 1,
+        status: 'ended',
+      })
+      if (ended.items.length) {
+        const detail = await getRollcall(ended.items[0].id)
+        this.current = detail
+        this.recomputeCounts()
+        this.stopPolling()
+        return detail
+      }
+
+      this.reset()
+      return null
+    },
+
+    async checkin() {
       const current = this.current
       if (!current) {
         throw new ApiError(40402, '点名场次不存在', 404)
       }
 
-      const record = await apiCheckin(current.session.id, {
-        student_id: studentId,
-      })
+      const record = await apiCheckin(current.session.id)
 
       if (this.current?.session.id === current.session.id) {
         const index = this.current.records.findIndex(

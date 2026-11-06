@@ -155,6 +155,56 @@ button {
   font-weight: 600;
 }
 
+.brand-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text);
+}
+
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.role-teacher {
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+.role-monitor {
+  background: #f3e8ff;
+  color: #7c3aed;
+}
+
+.role-student {
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+
+.logout-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-danger);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.logout-button:hover {
+  text-decoration: underline;
+}
+
 .brand-mark {
   display: grid;
   flex: none;
@@ -195,6 +245,10 @@ button {
 
 .nav-link:hover {
   color: var(--color-primary-dark);
+}
+
+.nav-link--muted {
+  color: var(--color-text-secondary);
 }
 
 .page-head {
@@ -264,15 +318,25 @@ button {
   }
 
   .topbar-inner {
-    height: 56px;
-    padding: 0 12px;
+    height: auto;
+    min-height: 56px;
+    flex-wrap: wrap;
+    padding: 10px 12px;
   }
 
   .brand-name {
     font-size: 15px;
   }
 
-  .topbar-clock {
+  .topbar-right {
+    flex-wrap: wrap;
+    gap: 10px;
+    font-size: 12px;
+    white-space: normal;
+  }
+
+  .topbar-clock,
+  .user-name {
     display: none;
   }
 

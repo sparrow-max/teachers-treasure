@@ -2,6 +2,7 @@
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed } from 'vue'
 
+import { useAuthStore } from '@/stores/auth'
 import { useRollcallStore } from '@/stores/rollcall'
 import { useStudentStore } from '@/stores/student'
 import { notifyError } from '@/utils/notify'
@@ -10,8 +11,11 @@ import type { RecordStatus, Student } from '@/types/api'
 
 type TagType = 'success' | 'warning' | 'danger' | 'info'
 
+const auth = useAuthStore()
 const studentStore = useStudentStore()
 const rollcallStore = useRollcallStore()
+
+const canManage = computed(() => auth.canManageStudents)
 
 const statusMap = computed(() => {
   const map = new Map<number, RecordStatus>()
@@ -24,6 +28,16 @@ const statusMap = computed(() => {
 const calling = computed(
   () => rollcallStore.current?.session.status === 'calling',
 )
+
+const hintText = computed(() => {
+  if (!canManage.value) {
+    return '班长视图仅可查看名单'
+  }
+  if (calling.value) {
+    return '名单变更将在下次点名生效'
+  }
+  return `共 ${studentStore.students.length} 人`
+})
 
 function statusInfo(student: Student): { text: string; type: TagType } {
   const status = statusMap.value.get(student.id)
@@ -40,9 +54,13 @@ function statusInfo(student: Student): { text: string; type: TagType } {
 }
 
 async function remove(student: Student): Promise<void> {
+  if (!canManage.value) {
+    return
+  }
+
   try {
     await ElMessageBox.confirm(
-      `确认从名单中删除「${student.name}」？历史记录会保留。`,
+      `确认从名单中删除「${student.name}」？历史记录会保留，账号将被禁用。`,
       '删除学生',
       {
         type: 'warning',
@@ -56,7 +74,7 @@ async function remove(student: Student): Promise<void> {
 
   try {
     await studentStore.removeStudent(student.id)
-    ElMessage.success('已删除')
+    ElMessage.success('已删除，账号已禁用')
   } catch (error) {
     notifyError(error)
   }
@@ -67,9 +85,7 @@ async function remove(student: Student): Promise<void> {
   <section class="card">
     <div class="section-head">
       <h2 class="section-title">学生名单</h2>
-      <span class="section-hint">
-        {{ calling ? '名单变更将在下次点名生效' : `共 ${studentStore.students.length} 人` }}
-      </span>
+      <span class="section-hint">{{ hintText }}</span>
     </div>
 
     <p v-if="studentStore.loading && !studentStore.students.length" class="empty">
@@ -99,7 +115,15 @@ async function remove(student: Student): Promise<void> {
           </el-tag>
         </span>
         <span class="cell row-actions" data-label="操作">
-          <el-button link type="danger" @click="remove(student)">删除</el-button>
+          <el-button
+            v-if="canManage"
+            link
+            type="danger"
+            @click="remove(student)"
+          >
+            删除
+          </el-button>
+          <span v-else class="muted">只读</span>
         </span>
       </div>
     </div>

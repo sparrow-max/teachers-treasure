@@ -1,16 +1,19 @@
 <script setup lang="ts">
-
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
 import AbsenceList from '@/components/AbsenceList.vue'
+import AppHeader from '@/components/AppHeader.vue'
 import CheckinList from '@/components/CheckinList.vue'
 import { getRollcall, listRollcalls } from '@/api/rollcalls'
+import { useAuthStore } from '@/stores/auth'
 import { formatDateTime } from '@/utils/format'
 import { notifyError } from '@/utils/notify'
 
 import type { Session, SessionDetail, SessionStatus } from '@/types/api'
 
 type TagType = 'warning' | 'info'
+
+const auth = useAuthStore()
 
 const items = ref<Session[]>([])
 const total = ref(0)
@@ -22,6 +25,8 @@ const loading = ref(false)
 const drawerVisible = ref(false)
 const detail = ref<SessionDetail | null>(null)
 const detailLoading = ref(false)
+
+const isStudent = computed(() => auth.isStudent)
 
 function statusText(value: SessionStatus): string {
   return value === 'calling' ? '点名中' : '已结束'
@@ -78,23 +83,19 @@ onMounted(load)
 
 <template>
   <div class="app-shell">
-    <header class="topbar">
-      <div class="topbar-inner">
-        <div class="brand">
-          <span class="brand-mark">签</span>
-          <span class="brand-name">课堂签到</span>
-        </div>
-        <div class="topbar-right">
-          <router-link to="/" class="nav-link">返回签到主页</router-link>
-        </div>
-      </div>
-    </header>
+    <AppHeader active="history" />
 
     <main class="page">
       <div class="page-head">
         <div>
           <h1 class="page-title">历史点名</h1>
-          <p class="page-subtitle">查看往次点名的统计与签到、缺勤明细</p>
+          <p class="page-subtitle">
+            {{
+              isStudent
+                ? '查看你参与过的场次与本人签到、缺勤记录'
+                : '查看往次点名的统计与签到、缺勤明细'
+            }}
+          </p>
         </div>
         <el-select
           v-model="status"
@@ -119,14 +120,19 @@ onMounted(load)
 
         <template v-else-if="items.length">
           <div class="history-table">
-            <div class="history-head history-grid grid-head">
+            <div
+              class="history-head history-grid grid-head"
+              :class="{ 'history-grid--student': isStudent }"
+            >
               <span>标题</span>
               <span>状态</span>
               <span>开始时间</span>
               <span>结束时间</span>
-              <span>总人数</span>
-              <span>已签到</span>
-              <span>缺勤</span>
+              <template v-if="!isStudent">
+                <span>总人数</span>
+                <span>已签到</span>
+                <span>缺勤</span>
+              </template>
             </div>
 
             <button
@@ -134,6 +140,7 @@ onMounted(load)
               :key="item.id"
               type="button"
               class="history-row history-grid"
+              :class="{ 'history-grid--student': isStudent }"
               @click="openDetail(item)"
             >
               <span class="cell history-title" data-label="标题">{{ item.title }}</span>
@@ -144,9 +151,11 @@ onMounted(load)
               </span>
               <span class="cell" data-label="开始时间">{{ formatDateTime(item.started_at) }}</span>
               <span class="cell" data-label="结束时间">{{ formatDateTime(item.ended_at) }}</span>
-              <span class="cell" data-label="总人数">{{ item.total_count }}</span>
-              <span class="cell" data-label="已签到">{{ item.present_count }}</span>
-              <span class="cell" data-label="缺勤">{{ item.absent_count }}</span>
+              <template v-if="!isStudent">
+                <span class="cell" data-label="总人数">{{ item.total_count }}</span>
+                <span class="cell" data-label="已签到">{{ item.present_count }}</span>
+                <span class="cell" data-label="缺勤">{{ item.absent_count }}</span>
+              </template>
             </button>
           </div>
 
@@ -163,7 +172,9 @@ onMounted(load)
           </div>
         </template>
 
-        <p v-else class="empty">还没有历史场次，先回主页发起一次点名吧</p>
+        <p v-else class="empty">
+          {{ isStudent ? '还没有你参与过的场次' : '还没有历史场次，先回主页发起一次点名吧' }}
+        </p>
       </section>
     </main>
 
@@ -184,11 +195,14 @@ onMounted(load)
           <p class="detail-meta">
             结束：{{ formatDateTime(detail.session.ended_at) }}
           </p>
-          <div class="detail-stats">
+          <div v-if="!isStudent" class="detail-stats">
             <span>总人数 {{ detail.session.total_count }}</span>
             <span>签到 {{ detail.session.present_count }}</span>
             <span>缺勤 {{ detail.session.absent_count }}</span>
             <span>待签到 {{ detail.session.pending_count }}</span>
+          </div>
+          <div v-else class="detail-stats">
+            <span>我的记录 {{ detail.records.length }} 条</span>
           </div>
         </div>
 
@@ -220,6 +234,10 @@ onMounted(load)
   grid-template-columns: 2fr 0.8fr 1.5fr 1.5fr 0.6fr 0.7fr 0.7fr;
   gap: 12px;
   align-items: center;
+}
+
+.history-grid--student {
+  grid-template-columns: 2fr 0.8fr 1.5fr 1.5fr;
 }
 
 .history-head {
@@ -307,7 +325,8 @@ onMounted(load)
     display: none;
   }
 
-  .history-row {
+  .history-row,
+  .history-grid--student {
     display: block;
     padding: 12px;
     border: 1px solid var(--color-border);

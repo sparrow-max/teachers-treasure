@@ -1,6 +1,10 @@
 import { request } from './http'
 
-import type { DeleteStudentResult, Student, StudentCreate } from '@/types/api'
+import type {
+  DeleteStudentResult,
+  Student,
+  StudentCreate,
+} from '@/types/api'
 
 export interface StudentQuery {
   keyword?: string

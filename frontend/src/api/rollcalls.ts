@@ -1,7 +1,6 @@
 import { request } from './http'
 
 import type {
-  CheckinPayload,
   Page,
   RecordItem,
   RollcallCreate,
@@ -28,8 +27,11 @@ export function getRollcall(sessionId: number): Promise<SessionDetail> {
   return request<SessionDetail>('get', `/api/v1/rollcalls/${sessionId}`)
 }
 
-export function checkin(sessionId: number, payload: CheckinPayload): Promise<RecordItem> {
-  return request<RecordItem>('post', `/api/v1/rollcalls/${sessionId}/checkin`, payload)
+export function checkin(sessionId: number): Promise<RecordItem> {
+  return request<RecordItem>(
+    'post',
+    `/api/v1/rollcalls/${sessionId}/checkin`,
+  )
 }
 
 export function endRollcall(sessionId: number): Promise<SessionDetail> {

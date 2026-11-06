@@ -1,10 +1,47 @@
 export type Role = '学生' | '班长' | '教师'
 
+export type StudentRole = '学生' | '班长'
+
+export type SystemRole = 'teacher' | 'monitor' | 'student'
+
 export type SessionStatus = 'calling' | 'ended'
 
 export type RecordStatus = 'pending' | 'present' | 'absent'
 
 export type OrderBy = 'student_no' | 'name' | 'id'
+
+export interface User {
+  id: number
+  username: string
+  role: SystemRole
+  display_name: string
+  student_id: number | null
+  must_change_password: boolean
+  active: boolean
+  created_at: string
+  last_login_at: string | null
+}
+
+export interface LoginResponse {
+  access_token: string
+  token_type: 'bearer'
+  expires_in: number
+  user: User
+}
+
+export interface LoginPayload {
+  username: string
+  password: string
+}
+
+export interface ChangePasswordPayload {
+  old_password: string
+  new_password: string
+}
+
+export interface ChangePasswordResult {
+  changed: boolean
+}
 
 export interface Student {
   id: number
@@ -55,16 +92,14 @@ export interface Page<T> {
 export interface StudentCreate {
   student_no: string
   name: string
-  role?: Role
+  role?: StudentRole
+  initial_password?: string
+  create_account?: boolean
 }
 
 export interface RollcallCreate {
   title?: string
   order_by?: OrderBy
-}
-
-export interface CheckinPayload {
-  student_id: number
 }
 
 export interface DeleteStudentResult {

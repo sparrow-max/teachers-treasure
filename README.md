@@ -2,8 +2,8 @@
 
 一个简洁易用的课堂点名与签到 Web 应用：教师维护名单、一键点名，学生在线签到，结束后自动生成缺勤记录。
 
-> **当前状态：设计阶段（v1.1）**
-> 本仓库目前仅包含设计文档与协作规范，尚未生成任何应用代码。接口契约冻结后，将按文档进入并行开发。
+> **当前状态：v1.1 前端已实现（Mock 可运行，后端与数据库待开发）**
+> 前端已提供登录、首次改密、教师/班长/学生角色视图、点名与历史页；默认使用严格遵循第 7 章契约的 Mock 数据。
 >
 > v1.1 新增：登录与 JWT 认证、教师/班长/学生三类角色视图与权限控制。
 
@@ -50,8 +50,8 @@
 
 ```text
 .
-├── docs/                  # 设计文档（当前唯一内容）
-├── frontend/              # Vue 3 前端（待开发）
+├── docs/                  # 设计文档
+├── frontend/              # Vue 3 前端（已实现，Mock 可运行）
 ├── backend/               # FastAPI 后端（待开发）
 ├── database/              # DDL、迁移、种子数据（待开发）
 ├── README.md
@@ -105,15 +105,24 @@ Base URL：`/api/v1`，全部字段使用 `snake_case`，响应为 `{ code, mess
 
 ---
 
-## 本地开发（规划，尚未实现）
+## 本地开发
+
+前端已可直接运行：
 
 ```text
-前端：cd frontend && npm install && npm run dev
-后端：cd backend && pip install -r requirements.txt && uvicorn app.main:app --reload
-数据库：alembic upgrade head
+cd frontend
+npm install
+npm run dev
 ```
 
-以上命令将在对应代码提交后生效。
+默认使用 Mock 数据。与真实后端联调时，在 `frontend/.env.local` 中设置：
+
+```text
+VITE_USE_MOCK=false
+VITE_API_BASE_URL=http://localhost:8000
+```
+
+后端与数据库命令待成员 B / C 提交对应代码后补充。
 
 ---
 
@@ -121,7 +130,9 @@ Base URL：`/api/v1`，全部字段使用 `snake_case`，响应为 `{ code, mess
 
 登录 → 按角色进入不同视图 → 添加学生（自动开通账号）→ 开始点名 → 学生签到 → 结束点名 → 查看签到与缺勤记录。完整验收清单见[总体架构 · 第 11 章](docs/总体架构.md#11-验收清单端到端)。
 
-**初始账号**：教师账号由 `backend/scripts/seed_teacher.py` 创建（默认用户名 `teacher`，密码由环境变量或随机生成）；学生账号在教师添加学生时自动开通，用户名为学号，首次登录必须修改密码。
+**演示账号（Mock）**：教师 `teacher` / `Teacher123`，首次登录需修改密码；学生账号由教师在页面添加学生时自动开通，用户名为学号，首次登录必须修改密码。
+
+**真实后端**：教师账号由 `backend/scripts/seed_teacher.py` 创建，学生账号规则相同。
 
 ---
 
