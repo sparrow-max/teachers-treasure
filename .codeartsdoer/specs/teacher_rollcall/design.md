@@ -669,6 +669,7 @@ export interface User {
   role: SystemRole;
   display_name: string;
   student_id: number | null;
+  class_id: number | null;
   must_change_password: boolean;
   active: boolean;
   created_at: string;
@@ -682,8 +683,17 @@ export interface LoginResponse {
   user: User;
 }
 
+export interface Classroom {
+  id: number;
+  name: string;
+  code: string;
+  active: boolean;
+  created_at: string;
+}
+
 export interface Student {
   id: number;
+  class_id: number;
   student_no: string;
   name: string;
   role: RosterRole;
@@ -693,6 +703,7 @@ export interface Student {
 
 export interface Session {
   id: number;
+  class_id: number;
   title: string;
   status: SessionStatus;
   order_by: OrderBy;
@@ -1251,6 +1262,8 @@ GET /api/v1/health HTTP/1.1
 ```
 
 ## 2.3 数据模型
+
+> **v1.3 多班级扩展**：新增 `classes(id, name, code, active, created_at, updated_at)`；`students.class_id` 与 `rollcall_sessions.class_id` 为非空外键（`ON DELETE RESTRICT`）；一个学生只属于一个班。迁移 `0006` 建表、`0007` 回填默认班级并加 `class_id`。教师可跨班；班长/学生由服务端强制本班，跨班返回 `40301`/`40402`。
 
 ### 2.3.1 设计目标
 

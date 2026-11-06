@@ -3,9 +3,14 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
+from alembic import command
+from alembic.config import Config
 from sqlalchemy import inspect, text
 
+DB_DIR = Path(__file__).resolve().parents[1]
+
 EXPECTED_TABLES = {
+    "classes",
     "students",
     "rollcall_sessions",
     "attendance_records",
@@ -71,7 +76,7 @@ def test_migration_head_creates_all_tables(db_engine) -> None:
     assert EXPECTED_TABLES <= tables
     with db_engine.connect() as connection:
         version = connection.scalar(text("SELECT version_num FROM alembic_version"))
-    assert version == "0005"
+    assert version == "0007"
 
 
 def test_users_has_token_version(db_engine) -> None:
@@ -81,8 +86,16 @@ def test_users_has_token_version(db_engine) -> None:
 
 def test_expected_indexes_exist(db_engine) -> None:
     expected = {
-        "students": {"idx_students_active_no"},
-        "rollcall_sessions": {"idx_sessions_started", "idx_sessions_status"},
+        "classes": {"idx_classes_active_code"},
+        "students": {
+            "idx_students_active_no",
+            "idx_students_class_active_no",
+        },
+        "rollcall_sessions": {
+            "idx_sessions_started",
+            "idx_sessions_status",
+            "idx_sessions_class_started",
+        },
         "attendance_records": {
             "idx_records_session_status_order",
             "idx_records_session_order",
@@ -97,7 +110,7 @@ def test_expected_indexes_exist(db_engine) -> None:
 
 
 def test_schema_sql_matches_migrations(db_engine, tmp_path: Path) -> None:
-    schema_path = Path(__file__).resolve().parents[1] / "schema.sql"
+    schema_path = DB_DIR / "schema.sql"
     schema_database = tmp_path / "schema_only.db"
 
     connection = sqlite3.connect(schema_database)
@@ -109,3 +122,47 @@ def test_schema_sql_matches_migrations(db_engine, tmp_path: Path) -> None:
     migration_database = db_engine.url.database
     assert migration_database is not None
     assert _snapshot(migration_database) == _snapshot(schema_database)
+
+
+def test_class_backfill_from_0005(tmp_path: Path, monkeypatch) -> None:
+    database = tmp_path / "legacy.db"
+    url = f"sqlite:///{database}"
+    monkeypatch.setenv("DATABASE_URL", url)
+
+    config = Config(str(DB_DIR / "alembic.ini"))
+    config.set_main_option("script_location", str(DB_DIR / "migrations"))
+    config.set_main_option("sqlalchemy.url", url)
+
+    command.upgrade(config, "0005")
+    connection = sqlite3.connect(database)
+    try:
+        connection.execute(
+            "INSERT INTO students (student_no, name, role) "
+            "VALUES ('20230001', '张三', '学生')"
+        )
+        connection.execute(
+            "INSERT INTO rollcall_sessions (title) VALUES ('旧场次')"
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+    command.upgrade(config, "head")
+
+    connection = sqlite3.connect(database)
+    try:
+        default_class = connection.execute(
+            "SELECT id, code FROM classes WHERE code = 'DEFAULT'"
+        ).fetchone()
+        assert default_class is not None
+        student_class = connection.execute(
+            "SELECT class_id FROM students WHERE student_no = '20230001'"
+        ).fetchone()[0]
+        session_class = connection.execute(
+            "SELECT class_id FROM rollcall_sessions WHERE title = '旧场次'"
+        ).fetchone()[0]
+    finally:
+        connection.close()
+
+    assert student_class == default_class[0]
+    assert session_class == default_class[0]
