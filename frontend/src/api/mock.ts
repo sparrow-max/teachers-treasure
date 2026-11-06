@@ -239,10 +239,10 @@ function initialPasswordValue(value: unknown): string {
 function newPasswordValue(value: unknown): string {
   const password = passwordValue(value, '新密码')
   if (password.length < 8 || password.length > 64) {
-    throw new ApiError(40002, '新密码需为 8–64 位', 400)
+    throw new ApiError(40004, '新密码需为 8–64 位', 400)
   }
   if (!/[A-Za-z]/.test(password) || !/\d/.test(password)) {
-    throw new ApiError(40002, '新密码需同时包含字母和数字', 400)
+    throw new ApiError(40004, '新密码需同时包含字母和数字', 400)
   }
   return password
 }
@@ -441,7 +441,7 @@ function changePassword(
   }
 
   if (newPassword === oldPassword) {
-    throw new ApiError(40002, '新密码不能与旧密码相同', 400)
+    throw new ApiError(40004, '新密码不能与旧密码相同', 400)
   }
 
   user.password = newPassword
@@ -450,8 +450,13 @@ function changePassword(
   return { changed: true }
 }
 
-function toSession(row: SessionRow): Session {
-  const records = state.records.filter((record) => record.session_id === row.id)
+function toSession(row: SessionRow, user?: MockUser): Session {
+  let records = state.records.filter((record) => record.session_id === row.id)
+
+  if (user?.role === 'student') {
+    records = records.filter((record) => record.student_id === user.student_id)
+  }
+
   const counts = countStatuses(records)
   return {
     ...row,
@@ -467,10 +472,13 @@ function toDetail(row: SessionRow, user?: MockUser): SessionDetail {
 
   if (user?.role === 'student') {
     records = records.filter((record) => record.student_id === user.student_id)
+    if (!records.length) {
+      throw new ApiError(40402, '点名场次不存在', 404)
+    }
   }
 
   return {
-    session: toSession(row),
+    session: toSession(row, user),
     records: records
       .sort((a, b) => a.order_no - b.order_no)
       .map((record) => clone(record)),
@@ -518,6 +526,10 @@ function addStudent(body: unknown): Student {
   const studentNo = normalizeText(payload.student_no, '学号', 32)
   const name = normalizeText(payload.name, '姓名', 32)
   const role = parseStudentRole(payload.role)
+
+  if (studentNo.length < 6) {
+    throw new ApiError(40001, '学号需为 6–32 位', 400)
+  }
 
   if (!/^[A-Za-z0-9_-]+$/.test(studentNo)) {
     throw new ApiError(
@@ -664,7 +676,7 @@ function listSessions(
   const start = (page - 1) * pageSize
   const items = sessions
     .slice(start, start + pageSize)
-    .map((session) => toSession(session))
+    .map((session) => toSession(session, user))
 
   return {
     items,

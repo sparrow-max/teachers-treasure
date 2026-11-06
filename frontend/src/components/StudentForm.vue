@@ -42,16 +42,14 @@ function validate(): boolean {
 
   if (!studentNo) {
     studentNoError.value = '请输入学号'
-  } else if (studentNo.length > 32) {
-    studentNoError.value = '学号不能超过 32 个字符'
+  } else if (studentNo.length < 6 || studentNo.length > 32) {
+    studentNoError.value = '学号需为 6–32 位'
   } else if (!/^[A-Za-z0-9_-]+$/.test(studentNo)) {
     studentNoError.value = '学号仅支持字母、数字、下划线和短横线'
   }
 
   if (password && (password.length < 6 || password.length > 32)) {
     passwordError.value = '初始密码需为 6–32 位'
-  } else if (!password && studentNo.length > 0 && studentNo.length < 6) {
-    passwordError.value = '学号少于 6 位时，请填写 6–32 位初始密码'
   }
 
   return (
@@ -80,6 +78,18 @@ async function submit(): Promise<void> {
     form.initial_password = ''
     ElMessage.success('添加成功，学生账号已开通，首次登录需修改密码')
   } catch (error) {
+    if (error instanceof ApiError && error.code === 40001) {
+      if (error.message.includes('学号')) {
+        studentNoError.value = error.message
+      } else {
+        nameError.value = error.message
+      }
+      return
+    }
+    if (error instanceof ApiError && error.code === 40002) {
+      passwordError.value = error.message
+      return
+    }
     if (error instanceof ApiError && error.code === 40901) {
       studentNoError.value = '该学号已存在'
       return
@@ -131,7 +141,7 @@ async function submit(): Promise<void> {
           clearable
         />
         <p v-if="studentNoError" class="field-error">{{ studentNoError }}</p>
-        <p class="field-hint">姓名允许重名，学号唯一</p>
+        <p class="field-hint">学号 6–32 位，唯一且作为登录用户名；姓名允许重名</p>
       </div>
 
       <div class="field">

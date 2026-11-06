@@ -62,7 +62,7 @@ async function submit(): Promise<void> {
     if (error instanceof ApiError) {
       if (error.code === 40003) {
         oldError.value = '旧密码不正确'
-      } else if (error.code === 40002) {
+      } else if (error.code === 40004) {
         newError.value = error.message
       } else {
         notifyError(error)

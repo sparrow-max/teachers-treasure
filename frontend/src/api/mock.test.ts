@@ -135,7 +135,7 @@ describe('v1.1 认证与权限契约', () => {
         undefined,
         login.access_token,
       ),
-    ).rejects.toMatchObject({ code: 40002 })
+    ).rejects.toMatchObject({ code: 40004 })
 
     const changed = await call<ChangePasswordResult>(
       'post',
@@ -279,13 +279,17 @@ describe('v1.1 认证与权限契约', () => {
 
     await expect(
       addStudent(token, '123', '短学号', '学生', ''),
+    ).rejects.toMatchObject({ code: 40001 })
+
+    await expect(
+      addStudent(token, '123456', '短学号', '学生', '12345'),
     ).rejects.toMatchObject({ code: 40002 })
 
-    const student = await addStudent(token, '123', '短学号', '学生', '123456')
-    expect(student.student_no).toBe('123')
+    const student = await addStudent(token, '123456', '短学号', '学生', '123456')
+    expect(student.student_no).toBe('123456')
 
     const login = await call<LoginResponse>('post', '/api/v1/auth/login', {
-      username: '123',
+      username: '123456',
       password: '123456',
     })
     expect(login.user.must_change_password).toBe(true)
@@ -322,6 +326,8 @@ describe('v1.1 认证与权限契约', () => {
     )
     expect(studentList.total).toBe(1)
     expect(studentList.items[0].id).toBe(detail.session.id)
+    expect(studentList.items[0].total_count).toBe(1)
+    expect(studentList.items[0].pending_count).toBe(1)
 
     const studentDetail = await call<SessionDetail>(
       'get',
@@ -332,6 +338,8 @@ describe('v1.1 认证与权限契约', () => {
     )
     expect(studentDetail.records).toHaveLength(1)
     expect(studentDetail.records[0].student_no).toBe('20231001')
+    expect(studentDetail.session.total_count).toBe(1)
+    expect(studentDetail.session.pending_count).toBe(1)
 
     const teacherDetail = await call<SessionDetail>(
       'get',
@@ -403,6 +411,20 @@ describe('v1.1 认证与权限契约', () => {
     )
     expect(secondDetail.records).toHaveLength(1)
     expect(secondDetail.records[0].status).toBe('absent')
+    expect(secondDetail.session.total_count).toBe(1)
+    expect(secondDetail.session.absent_count).toBe(1)
+
+    await addStudent(token, '20231003', '王五')
+    const thirdAccess = await studentToken('20231003')
+    await expect(
+      call(
+        'get',
+        `/api/v1/rollcalls/${detail.session.id}`,
+        undefined,
+        undefined,
+        thirdAccess,
+      ),
+    ).rejects.toMatchObject({ code: 40402 })
   })
 
   it('历史场次分页、非法参数与非法 Token', async () => {
