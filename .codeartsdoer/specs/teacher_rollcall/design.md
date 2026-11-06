@@ -57,14 +57,14 @@
 | 健康检查（免认证、返回状态与版本） | `GET /health` | `docs/后端.md:131-141` | 100% |
 | 业务错误码与权限错误码 | 7.2 错误码注册表 | `docs/总体架构.md:275-296` | 100% |
 | 签到与结束并发无待签到残留 | 双方均只更新 `pending`，条件更新 | `docs/后端.md:645`；`docs/数据库.md:443-446` | 75% |
-| 开发 SQLite / 生产 PostgreSQL 行为一致 | SQLAlchemy + Alembic + 方言差异说明 | `docs/数据库.md:356-367` | 100% |
+| SQLite 单库（SQLAlchemy + Alembic） | 模型、迁移、Repository 与约束测试全部覆盖 SQLite | `database/README.md` | 100% |
 
 ### 1.1.2 需要扩展的功能
 
 | 需求功能 | 存量功能 | 差异说明 | 扩展方向 |
 | --- | --- | --- | --- |
-| 改密成功后当前登录态必须失效（5.3.5） | JWT 无状态，仅前端清 Token（`docs/后端.md:531`） | 服务端仍接受改密前签发的 Token，旧 Token 在 8 小时内可继续调用业务接口，违反"必须要求重新登录" | 新增 `users.token_version`；JWT 增加 `pv` 声明；`get_current_user` 比对版本，不一致返回 `40103` |
-| 查看历史名单（含已删除，5.4.9） | `GET /students` 仅有布尔 `active`（默认 `true`） | 布尔参数无法表达"含已删除"这一第 3 种视图，且不能破坏既有 `active` 语义 | 新增可选 `include_inactive`（默认 `false`）；为真时返回在册与不在册全集；`active` 行为保持不变 |
+| 改密成功后当前登录态必须失效（5.3.5） | 已实现 `users.token_version` + JWT `pv` | 旧 Token 在 8 小时内可继续调用业务接口，违反"必须要求重新登录" | 已落地：改密 `token_version+1`，`get_current_user` 比对不一致返回 `40103` |
+| 查看历史名单（含已删除，5.4.9） | 已实现可选 `include_inactive`（默认 `false`） | 布尔 `active` 无法表达"含已删除"这一第 3 种视图 | 已落地：`include_inactive=true` 返回在册与不在册全集；`active` 行为保持不变 |
 | 签到成功后刷新服务端统计与记录区（5.6.9、5.8.3） | `checkin` 仅返回 `Record`（`docs/后端.md:367-385`） | 响应不含统计；前端自行 +1 会违反"统计不得依赖前端计算" | 前端签到成功后调用 `GET /rollcalls/{id}` 取服务端聚合结果；**不扩展** `checkin` 响应体，避免破坏契约 |
 | 记录已缺勤时签到拒绝并提示"点名已结束"（5.6.5） | 诊断顺序仅覆盖：场次不存在/已结束/记录不存在/已签到（`docs/后端.md:408-410`） | `rowcount=0` 且场次仍为 `calling`、记录为 `absent` 时无映射，可能落到 `40904` 或空诊断 | 诊断器补充 `absent → 40903`；明确诊断顺序与返回码 |
 | 场次标题默认日期口径（5.5.5） | 服务端生成默认标题，未定义按哪个时区取日期（`docs/后端.md:88,256`） | 直接使用 UTC 会在北京时间 00:00–08:00 生成前一天日期 | 明确按 `APP_TIMEZONE`（默认 `Asia/Shanghai`）计算日期，存储仍用 UTC |
@@ -265,7 +265,7 @@ node "应用服务器（FastAPI）" {
   API --> SVC
 }
 
-database "SQLite（开发）\nPostgreSQL 16（生产）" as DB
+database "SQLite 3\nSQLAlchemy + Alembic" as DB
 
 node "运维侧" {
   component "健康探针" as HC
@@ -345,7 +345,7 @@ package "后端数据访问层" {
   [ORM Models\nUser / Student / RollcallSession / AttendanceRecord] as OM
 }
 
-database "数据库\nSQLite / PostgreSQL" as DB
+database "SQLite 3" as DB
 
 LV --> HC
 CPV --> HC
@@ -416,7 +416,7 @@ end note
 
 | 配置 | 取值策略 | 作用 |
 | --- | --- | --- |
-| `DATABASE_URL` | 开发 SQLite；生产 PostgreSQL | 方言差异由 SQLAlchemy 吸收 |
+| `DATABASE_URL` | SQLite 文件路径，默认 `sqlite:///./database/teacher_treasure.db` | SQLAlchemy 统一访问 |
 | `JWT_SECRET` | 生产必须环境变量注入，≥32 字节 | 禁止入库与入仓 |
 | `JWT_EXPIRE_MINUTES` | 固定 480 | 与 8 小时有效期一致 |
 | `CORS_ORIGINS` | 开发 `localhost:5173`；生产显式域名 | 禁止 `*` + 凭据 |
@@ -517,15 +517,15 @@ endif
 
 | 并发场景 | 机制 | 最终结果 |
 | --- | --- | --- |
-| 同一学生同时两次签到 | 两条请求竞争同一记录行；只有先获得行锁并满足 `status='pending'` 的请求 `rowcount=1` | 恰好一次成功；另一条 `rowcount=0`，诊断后返回 `40902` |
-| 签到与结束并发 | 结束事务先锁场次行并批量更新 `pending`；签到只更新单条 `pending` | 记录最终为 `present` 或 `absent` 之一，无 `pending` 残留 |
+| 同一学生同时两次签到 | 两条请求竞争同一记录；只有满足 `status='pending'` 且 `rowcount=1` 的请求成功 | 恰好一次成功；另一条 `rowcount=0`，诊断后返回 `40902` |
+| 签到与结束并发 | 结束批量更新 `pending`；签到只更新单条 `pending` | 记录最终为 `present` 或 `absent` 之一，无 `pending` 残留 |
 | 重复结束 | 场次条件更新 `WHERE status='calling'`，仅一个事务 `rowcount=1` | 另一次返回 `40903` |
 | 多端同时开始点名 | 各自创建独立场次，无全局互斥 | 场次互不干扰；学生端取最新开始者 |
 
-**锁序与可见性**：
-- 统一锁序为 **场次行 → 记录行**。签到不请求场次行锁（诊断使用非锁定读），结束先锁场次再批量锁记录，因此不存在环路等待。
-- PostgreSQL `READ COMMITTED` 下，若结束事务已锁记录但未提交，签到更新会阻塞至结束提交，随后 `rowcount=0`，诊断读到已提交的 `ended` 状态并返回 `40903`，不会误报。
-- SQLite 无 `FOR UPDATE`，写操作串行化；`rowcount` 与 `status` 条件仍是权威判据，行锁仅作为 PostgreSQL 的增强。
+**并发与可见性**：
+- 签到与结束都以条件 `UPDATE` 为权威：签到只更新 `status='pending'` 的单条记录；结束更新该场次全部 `pending` 与场次状态。
+- SQLite 写操作串行化，不使用 `SELECT ... FOR UPDATE`；`rowcount` 与 `status` 条件保证幂等。
+- 同一学生并发签到仅一次 `rowcount=1`；签到与结束并发时最终为 `present` 或 `absent` 之一。
 
 #### 2.1.3.4 结束点名事务
 
@@ -538,7 +538,7 @@ if (角色为教师/班长?) then (否)
   stop
 endif
 :开启事务;
-:锁定场次行\n（PostgreSQL FOR UPDATE）;
+:读取场次状态\n（条件更新兜底）;
 if (场次不存在?) then (是)
   :回滚并返回 40402;
   stop
@@ -1261,13 +1261,13 @@ GET /api/v1/health HTTP/1.1
 | 统计一致 | 统计始终等于明细，已结束场次无待签到 | 统计不落库、实时聚合；事务内断言 |
 | 并发正确 | 重复签到、并发结束、签到与结束并发均无脏状态 | 唯一约束 + 条件更新 + 单向锁序 |
 | 性能容量 | 单场次 ≤200 人；详情 P95 < 100ms；签到 P95 < 200ms | 复合索引覆盖详情/筛选/历史；列表批量聚合 |
-| 方言兼容 | SQLite 开发、PostgreSQL 生产行为一致 | ORM 统一语义；行锁降级为条件更新；迁移双向兼容 |
+| 数据库兼容 | SQLite 单库（SQLAlchemy + Alembic） | ORM 统一语义；条件更新替代行锁；迁移双向验证 |
 | 向后兼容 | 不破坏既有字段与语义 | 仅新增 `token_version` 与可选查询参数；CHECK 强化前先清洗 |
 
 **兼容与迁移策略**：
 1. `users.token_version` 以 `NOT NULL DEFAULT 0` 新增，存量账号无需回填。
 2. `attendance_records` 的 CHECK 强化前，先执行一致性清洗（`pending` 时间置空、`absent` 缺失时间补齐为场次结束时间）；当前仓库无生产数据，风险可控。
-3. 迁移文件编号 `0005_add_token_version_and_record_checks.py`，置于既定迁移目录，`upgrade` 与 `downgrade` 均需在 SQLite 与 PostgreSQL 验证。
+3. 迁移文件编号 `0005_add_user_token_version.py`，置于 `database/migrations/versions/`，`upgrade` 与 `downgrade` 已在 SQLite 验证。
 4. 学号/用户名唯一性约束保持不变；迁移前先做重复值检查，冲突时中止而非静默改名。
 
 ### 2.3.2 模型实现
@@ -1400,14 +1400,14 @@ RollcallSession "1" *-- "1" SessionStatistics : 聚合得出
 - **日志**：请求日志固定字段 `request_id`、方法、路径、状态、耗时、`error_code`、`user_id`；关键事件 `login_success`、`login_failed`、`password_changed`、`session_started`、`checkin`、`session_ended`。
 - **契约单一真源**：先改契约文档，再同步 OpenAPI 与前端类型；新增错误码必须登记。
 - **测试矩阵**：认证（8 类）、权限（角色交叉）、名单（唯一/软删除/不开通账号）、点名（顺序/快照/空名单）、签到（幂等/并发/越权）、结束（一致性/并发）、查询（分页/可见范围）、契约（字段集合）。
-- **迁移**：版本化、可回滚、SQLite 与 PostgreSQL 双跑；生产禁止直改表。
+- **迁移**：版本化、可回滚，SQLite 实际执行 `upgrade`/`downgrade`；禁止直改表。
 - **配置**：密钥仅环境变量；开发/生产差异集中在配置项，不散落代码。
 
 ### 2.4.5 兼容性
 
 - **浏览器**：Chrome、Edge、Safari 最近两个大版本；使用 Vue 3 + Element Plus 的稳定 API。
 - **移动端**：≥360px 无横向滚动；签到按钮点击区域 ≥44×44；表格在小屏采用卡片或横向省略策略。
-- **数据库**：SQLite 与 PostgreSQL 业务行为一致；行锁差异由条件更新兜底；`SUM(CASE WHEN ...)` 统一替代 `FILTER`。
+- **数据库**：SQLite 单库；条件更新兜底并发；`SUM(CASE WHEN ...)` 统一替代 `FILTER`。
 - **接口**：只增不删；新增字段可空/带默认值；`include_inactive` 默认 `false` 保持旧行为。
 - **存量迁移**：唯一约束不冲突；已软删除学号不可复用；迁移前做重复值预检。
 
