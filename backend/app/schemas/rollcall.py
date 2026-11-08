@@ -1,9 +1,8 @@
-from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
-from app.schemas.common import ORMModel
+from app.schemas.common import LocalDateTime, ORMModel
 
 
 class RollcallCreate(BaseModel):
@@ -25,7 +24,7 @@ class RecordOut(ORMModel):
     role: Literal["学生", "班长", "教师"]
     order_no: int
     status: Literal["pending", "present", "absent"]
-    checked_at: datetime | None
+    checked_at: LocalDateTime | None
 
 
 class SessionOut(ORMModel):
@@ -33,8 +32,8 @@ class SessionOut(ORMModel):
     title: str
     status: Literal["calling", "ended"]
     order_by: Literal["student_no", "name", "id"]
-    started_at: datetime
-    ended_at: datetime | None
+    started_at: LocalDateTime
+    ended_at: LocalDateTime | None
     total_count: int
     present_count: int
     absent_count: int

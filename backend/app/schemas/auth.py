@@ -1,9 +1,8 @@
-from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
-from app.schemas.common import ORMModel
+from app.schemas.common import LocalDateTime, ORMModel
 
 
 class LoginRequest(BaseModel):
@@ -24,8 +23,8 @@ class UserOut(ORMModel):
     student_id: int | None
     must_change_password: bool
     active: bool
-    created_at: datetime
-    last_login_at: datetime | None
+    created_at: LocalDateTime
+    last_login_at: LocalDateTime | None
 
 
 class LoginResponse(BaseModel):
@@ -37,4 +36,4 @@ class LoginResponse(BaseModel):
 
 class ChangePasswordRequest(BaseModel):
     old_password: str = Field(min_length=1, max_length=64)
-    new_password: str = Field(min_length=1, max_length=64)
+    new_password: str = Field(min_length=1)

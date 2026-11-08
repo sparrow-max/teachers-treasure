@@ -1,9 +1,8 @@
-from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
-from app.schemas.common import ORMModel
+from app.schemas.common import LocalDateTime, ORMModel
 
 
 class StudentCreate(BaseModel):
@@ -29,4 +28,4 @@ class StudentOut(ORMModel):
     name: str
     role: Literal["学生", "班长", "教师"]
     active: bool
-    created_at: datetime
+    created_at: LocalDateTime
