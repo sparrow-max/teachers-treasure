@@ -2,11 +2,12 @@
 
 一个简洁易用的课堂点名与签到 Web 应用：教师维护名单、一键点名，学生在线签到，结束后自动生成缺勤记录。
 
-> **当前状态：设计阶段（v1.1.2）**
-> 本仓库目前仅包含设计文档与协作规范，尚未生成任何应用代码。接口契约冻结后，将按文档进入并行开发。
+> **当前状态：实施阶段（v1.2）**
+> 数据库模块（SQLite + SQLAlchemy + Alembic）已实现；前端在 `feature/frontend-m3`，后端待接入。接口契约以 `docs/总体架构.md` 第 7 章为准。
 >
 > v1.1 新增：登录与 JWT 认证、教师/班长/学生三类角色视图与权限控制。
 > v1.1.2 澄清：MVP 为单课堂模型；视觉基线以 `frontend/src/styles/main.css` 为准；学生历史列表不返回本人签到时间。
+> v1.2 实现：数据库层（4 张表、迁移、Repository、种子账号、约束测试）。
 
 ---
 
@@ -30,8 +31,8 @@
 | 前端 | Vue 3 + Vite + TypeScript + Element Plus + Pinia + Axios |
 | 后端 | Python 3.12 + FastAPI + SQLAlchemy 2.0 + Pydantic v2 |
 | 认证 | JWT（HS256）+ bcrypt 密码哈希 |
-| 数据库 | 开发 SQLite / 生产 PostgreSQL 16 |
-| 部署 | Docker Compose（规划） |
+| 数据库 | SQLite 3（SQLAlchemy 2.0 + Alembic） |
+| 部署 | 本地启动；Docker Compose 可选 |
 
 ---
 
@@ -43,6 +44,7 @@
 | [前端设计](docs/前端.md) | 页面与组件、交互流程、接口使用矩阵、TypeScript 类型、视觉规范 |
 | [后端设计](docs/后端.md) | API 明细、校验、事务与并发、错误码、测试计划 |
 | [数据库设计](docs/数据库.md) | ER 图、表结构与 DDL、索引、Repository 接口、迁移与备份 |
+| [数据库模块](database/README.md) | SQLite + SQLAlchemy 实现、迁移、种子账号与测试命令 |
 
 **接口契约以《总体架构.md》第 7 章为准。** 任何接口变更必须先改该章，再同步后端 OpenAPI 与前端类型。
 
@@ -55,7 +57,7 @@
 ├── docs/                  # 设计文档（当前唯一内容）
 ├── frontend/              # Vue 3 前端（待开发）
 ├── backend/               # FastAPI 后端（待开发）
-├── database/              # DDL、迁移、种子数据（待开发）
+├── database/              # SQLite + SQLAlchemy + Alembic（已实现）
 ├── README.md
 ├── LICENSE
 └── .gitignore
@@ -69,7 +71,7 @@
 | --- | --- | --- |
 | 成员 A | 前端 | 登录页、改密页、路由守卫、角色视图、页面组件、状态管理、接口封装、样式、前端测试 |
 | 成员 B | 后端 | 认证与 JWT、角色鉴权、12 个 API、业务规则、事务、OpenAPI、后端测试 |
-| 成员 C | 数据库 / 部署 | `users` 表、DDL、Alembic 迁移、种子账号、索引、备份、Docker Compose |
+| 成员 C | 数据库 / 部署 | `users` 表、SQLite DDL、SQLAlchemy 模型、Alembic 迁移、种子账号、索引、约束测试 |
 | 全体 | 总体架构 | 契约评审、联调、发布 |
 
 ---
@@ -107,15 +109,27 @@ Base URL：`/api/v1`，全部字段使用 `snake_case`，响应为 `{ code, mess
 
 ---
 
-## 本地开发（规划，尚未实现）
+## 本地开发
 
-```text
-前端：cd frontend && npm install && npm run dev
-后端：cd backend && pip install -r requirements.txt && uvicorn app.main:app --reload
-数据库：alembic upgrade head
+```bash
+# 数据库：初始化、迁移、种子（在仓库根目录）
+uv venv database/.venv --python 3.14
+uv pip install --python database/.venv/bin/python -r database/requirements.txt
+DATABASE_URL=sqlite:///./database/teacher_treasure.db \
+  database/.venv/bin/alembic -c database/alembic.ini upgrade head
+SEED_TEACHER_PASSWORD='Teacher@123' \
+  database/.venv/bin/python -m database.seeds.seed_teacher
+database/.venv/bin/python -m database.seeds.seed_demo
+database/.venv/bin/pytest database/tests -q
+
+# 前端（feature/frontend-m3）
+cd frontend && npm install && npm run dev
+
+# 后端（待实现）
+cd backend && pip install -r requirements.txt && uvicorn app.main:app --reload
 ```
 
-以上命令将在对应代码提交后生效。
+数据库默认文件：`database/teacher_treasure.db`（不提交仓库）。详细说明见 [database/README.md](database/README.md)。
 
 ---
 
