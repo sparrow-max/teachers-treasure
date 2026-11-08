@@ -39,6 +39,10 @@ def get_student(db: Session, student_id: int) -> Student | None:
     return db.get(Student, student_id)
 
 
+def get_student_by_no(db: Session, student_no: str) -> Student | None:
+    return db.scalar(select(Student).where(Student.student_no == student_no))
+
+
 def create_student(
     db: Session,
     student_no: str,
