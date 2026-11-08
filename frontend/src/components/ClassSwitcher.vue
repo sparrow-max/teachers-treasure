@@ -23,7 +23,19 @@ function syncCurrent(value: number | null) {
   }
 }
 
-syncCurrent(classStore.currentClassId)
+watch(
+  () => classStore.currentClassId,
+  (value) => {
+    currentClassId.value = value
+  },
+  { immediate: true },
+)
+
+onMounted(async () => {
+  if (!classStore.classes.length) {
+    await classStore.loadClasses()
+  }
+})
 
 async function createClass(): Promise<void> {
   const name = form.name.trim()
@@ -63,19 +75,7 @@ async function removeClass(classId: number): Promise<void> {
 
   try {
     await classStore.removeClass(classId)
-watch(
-  () => classStore.currentClassId,
-  (value) => {
-    currentClassId.value = value
-  },
-  { immediate: true },
-)
-
-onMounted(async () => {
-  if (!classStore.classes.length) {
-    await classStore.loadClasses()
-  }
-})
+    syncCurrent(classStore.currentClassId)
     ElMessage.success('班级已停用')
   } catch (error) {
     if (error instanceof ApiError && error.code === 40908) {
@@ -112,7 +112,12 @@ onMounted(async () => {
     </el-tag>
     <el-tag v-else type="info" effect="light">未绑定班级</el-tag>
 
-    <el-dialog v-model="dialogVisible" title="班级管理" width="min(520px, 92vw)">
+    <el-dialog
+      v-model="dialogVisible"
+      title="班级管理"
+      width="min(520px, 92vw)"
+      append-to-body
+    >
       <div class="class-list">
         <div v-for="item in classStore.classes" :key="item.id" class="class-row">
           <span class="class-name">{{ item.name }}</span>
