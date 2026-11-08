@@ -36,6 +36,7 @@ def login(db: Session, payload: LoginRequest) -> LoginResponse:
         username=user.username,
         role=user.role,
         student_id=user.student_id,
+        token_version=user.token_version,
     )
     return LoginResponse(
         access_token=access_token,

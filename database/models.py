@@ -261,6 +261,10 @@ class User(Base):
 
     student: Mapped[Optional["Student"]] = relationship(back_populates="user")
 
+    @property
+    def class_id(self) -> int | None:
+        return self.student.class_id if self.student is not None else None
+
     __table_args__ = (
         UniqueConstraint("username", name="uk_users_username"),
         UniqueConstraint("student_id", name="uk_users_student"),

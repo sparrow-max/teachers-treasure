@@ -25,6 +25,12 @@ def get_current_user(
     user = get_user_by_id(db, user_id)
     if user is None:
         raise ApiError(ErrorCode.UNAUTHORIZED)
+    try:
+        token_version = int(payload.get("pv", -1))
+    except (TypeError, ValueError) as exc:
+        raise ApiError(ErrorCode.UNAUTHORIZED) from exc
+    if token_version != user.token_version:
+        raise ApiError(ErrorCode.TOKEN_EXPIRED)
     return user
 
 

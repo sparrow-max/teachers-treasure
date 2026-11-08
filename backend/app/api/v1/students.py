@@ -20,12 +20,14 @@ router = APIRouter(prefix="/students", tags=["students"])
 def list_students(
     keyword: str | None = Query(default=None, max_length=32),
     active: bool = Query(default=True),
+    include_inactive: bool = Query(default=False),
+    class_id: int | None = Query(default=None, ge=1),
     db: Session = Depends(get_db),
-    _current_user: User = Depends(
-        require_roles("teacher", "monitor")
-    ),
+    current_user: User = Depends(require_roles("teacher", "monitor")),
 ):
-    students = student_service.list_students(db, keyword, active)
+    students = student_service.list_students(
+        db, current_user, keyword, active, include_inactive, class_id
+    )
     return ok([StudentOut.model_validate(student) for student in students])
 
 

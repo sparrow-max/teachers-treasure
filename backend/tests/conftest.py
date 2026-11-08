@@ -2,14 +2,21 @@ from collections.abc import Generator
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.core.database import get_db
 from app.core.security import hash_password
 from app.main import create_app
-from app.models import Base, Student, User
+from app.models import Base, Classroom, Student, User
+
+
+@event.listens_for(Session, "before_flush")
+def _assign_default_class(session, _context, _instances) -> None:
+    for instance in session.new:
+        if isinstance(instance, Student) and instance.class_id is None:
+            instance.class_id = 1
 
 
 @pytest.fixture()
@@ -26,6 +33,9 @@ def db_session() -> Generator[Session, None, None]:
         expire_on_commit=False,
     )
     with testing_session() as session:
+        classroom = Classroom(id=1, name="测试班", code="C-001")
+        session.add(classroom)
+        session.commit()
         yield session
     Base.metadata.drop_all(engine)
     engine.dispose()
@@ -40,6 +50,18 @@ def client(db_session: Session) -> Generator[TestClient, None, None]:
 
     application.dependency_overrides[get_db] = override_get_db
     with TestClient(application) as test_client:
+        original_post = test_client.post
+
+        def post(url: str, **kwargs):
+            payload = kwargs.get("json")
+            if isinstance(payload, dict):
+                if url.endswith("/students") or url.endswith("/rollcalls"):
+                    payload = dict(payload)
+                    payload.setdefault("class_id", 1)
+                    kwargs["json"] = payload
+            return original_post(url, **kwargs)
+
+        test_client.post = post  # type: ignore[method-assign]
         yield test_client
     application.dependency_overrides.clear()
 

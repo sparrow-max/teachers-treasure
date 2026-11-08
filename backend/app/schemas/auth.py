@@ -21,6 +21,7 @@ class UserOut(ORMModel):
     role: Literal["teacher", "monitor", "student"]
     display_name: str
     student_id: int | None
+    class_id: int | None
     must_change_password: bool
     active: bool
     created_at: LocalDateTime

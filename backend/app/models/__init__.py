@@ -1,12 +1,15 @@
-from app.models.base import Base, TimestampMixin
-from app.models.record import AttendanceRecord
-from app.models.session import RollcallSession
-from app.models.student import Student
-from app.models.user import User
+from database.models import (
+    AttendanceRecord,
+    Base,
+    Classroom,
+    RollcallSession,
+    Student,
+    User,
+)
 
 __all__ = [
     "Base",
-    "TimestampMixin",
+    "Classroom",
     "Student",
     "RollcallSession",
     "AttendanceRecord",

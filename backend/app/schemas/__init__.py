@@ -4,7 +4,13 @@ from app.schemas.auth import (
     LoginResponse,
     UserOut,
 )
-from app.schemas.common import ChangedResult, DeletedResult, ORMModel, Page
+from app.schemas.class_ import ClassCreate, ClassOut
+from app.schemas.common import (
+    ChangedResult,
+    DeletedResult,
+    ORMModel,
+    Page,
+)
 from app.schemas.rollcall import (
     RecordOut,
     RollcallCreate,
@@ -22,6 +28,8 @@ __all__ = [
     "LoginResponse",
     "UserOut",
     "ChangePasswordRequest",
+    "ClassCreate",
+    "ClassOut",
     "StudentCreate",
     "StudentOut",
     "RollcallCreate",

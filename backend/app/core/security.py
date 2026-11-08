@@ -32,6 +32,7 @@ def create_access_token(
     username: str,
     role: str,
     student_id: int | None,
+    token_version: int = 0,
 ) -> tuple[str, int]:
     issued_at = datetime.now(timezone.utc)
     expires_at = issued_at + timedelta(minutes=settings.jwt_expire_minutes)
@@ -40,6 +41,7 @@ def create_access_token(
         "username": username,
         "role": role,
         "student_id": student_id,
+        "pv": token_version,
         "iat": issued_at,
         "exp": expires_at,
         "jti": uuid.uuid4().hex,

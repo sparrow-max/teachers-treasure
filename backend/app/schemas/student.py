@@ -6,6 +6,7 @@ from app.schemas.common import LocalDateTime, ORMModel
 
 
 class StudentCreate(BaseModel):
+    class_id: int = Field(gt=0)
     student_no: str = Field(
         min_length=6,
         max_length=32,
@@ -24,6 +25,7 @@ class StudentCreate(BaseModel):
 
 class StudentOut(ORMModel):
     id: int
+    class_id: int
     student_no: str
     name: str
     role: Literal["学生", "班长", "教师"]

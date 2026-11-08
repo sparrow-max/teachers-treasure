@@ -14,12 +14,15 @@ class ErrorCode(IntEnum):
     PASSWORD_CHANGE_REQUIRED = 40302
     STUDENT_NOT_FOUND = 40401
     SESSION_NOT_FOUND = 40402
+    CLASS_NOT_FOUND = 40403
     STUDENT_NO_EXISTS = 40901
     ALREADY_CHECKED_IN = 40902
     ROLLCALL_ENDED = 40903
     STUDENT_NOT_IN_SESSION = 40904
     NO_ACTIVE_STUDENTS = 40905
     USERNAME_EXISTS = 40906
+    CLASS_CODE_EXISTS = 40907
+    CLASS_HAS_STUDENTS = 40908
     INTERNAL_ERROR = 50000
 
 
@@ -35,13 +38,16 @@ ERROR_MESSAGES: dict[int, str] = {
     ErrorCode.FORBIDDEN: "角色权限不足",
     ErrorCode.PASSWORD_CHANGE_REQUIRED: "需先修改初始密码",
     ErrorCode.STUDENT_NOT_FOUND: "学生不存在",
-    ErrorCode.SESSION_NOT_FOUND: "点名场次不存在",
+    ErrorCode.SESSION_NOT_FOUND: "点名场次不存在或无权查看",
+    ErrorCode.CLASS_NOT_FOUND: "班级不存在或已停用",
     ErrorCode.STUDENT_NO_EXISTS: "该学号已存在",
     ErrorCode.ALREADY_CHECKED_IN: "该学生已签到",
     ErrorCode.ROLLCALL_ENDED: "点名已结束",
-    ErrorCode.STUDENT_NOT_IN_SESSION: "学生不在该场次",
-    ErrorCode.NO_ACTIVE_STUDENTS: "学生名单为空，无法开始点名",
+    ErrorCode.STUDENT_NOT_IN_SESSION: "学生不在该场次或班级不匹配",
+    ErrorCode.NO_ACTIVE_STUDENTS: "该班级没有在册学生，无法开始点名",
     ErrorCode.USERNAME_EXISTS: "账号已存在",
+    ErrorCode.CLASS_CODE_EXISTS: "班级编号已存在",
+    ErrorCode.CLASS_HAS_STUDENTS: "班级仍有在册学生，无法停用",
     ErrorCode.INTERNAL_ERROR: "服务器内部错误",
 }
 
@@ -57,12 +63,15 @@ HTTP_STATUS_BY_CODE: dict[int, int] = {
     ErrorCode.PASSWORD_CHANGE_REQUIRED: 403,
     ErrorCode.STUDENT_NOT_FOUND: 404,
     ErrorCode.SESSION_NOT_FOUND: 404,
+    ErrorCode.CLASS_NOT_FOUND: 404,
     ErrorCode.STUDENT_NO_EXISTS: 409,
     ErrorCode.ALREADY_CHECKED_IN: 409,
     ErrorCode.ROLLCALL_ENDED: 409,
     ErrorCode.STUDENT_NOT_IN_SESSION: 409,
     ErrorCode.NO_ACTIVE_STUDENTS: 409,
     ErrorCode.USERNAME_EXISTS: 409,
+    ErrorCode.CLASS_CODE_EXISTS: 409,
+    ErrorCode.CLASS_HAS_STUDENTS: 409,
     ErrorCode.INTERNAL_ERROR: 500,
 }
 

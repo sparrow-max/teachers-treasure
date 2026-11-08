@@ -6,6 +6,7 @@ from app.schemas.common import LocalDateTime, ORMModel
 
 
 class RollcallCreate(BaseModel):
+    class_id: int = Field(gt=0)
     title: str | None = Field(default=None, min_length=1, max_length=64)
     order_by: Literal["student_no", "name", "id"] = "student_no"
 
@@ -29,6 +30,7 @@ class RecordOut(ORMModel):
 
 class SessionOut(ORMModel):
     id: int
+    class_id: int
     title: str
     status: Literal["calling", "ended"]
     order_by: Literal["student_no", "name", "id"]
