@@ -139,6 +139,54 @@ LAN_IP=192.168.1.10 ./start.sh
 
 ---
 
+## Windows 原生启动（不使用 WSL）
+
+适用于演示机是 Windows、项目放在 Windows 本地磁盘的情况。
+
+要求：
+
+- Windows 10/11
+- Python 3.11+（推荐 3.12）
+- Node.js 20+（LTS）
+- **不要把项目放在 `\\wsl$` / `\\wsl.localhost` 网络路径**，否则 Windows 原生 Python 无法稳定创建虚拟环境
+
+首次在 Windows 上准备项目：
+
+```bat
+git clone https://github.com/sparrow-max/teachers-treasure C:\teachers-treasure
+cd /d C:\teachers-treasure
+```
+
+启动：
+
+```bat
+start-windows.bat
+```
+
+或 PowerShell：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\start-windows.ps1
+```
+
+脚本会：
+
+- 在 `database\.venv-win` 与 `backend\.venv-win` 创建 Windows 虚拟环境
+- 安装前后端依赖（前端使用官方 npm registry）
+- 初始化 SQLite、迁移并写入演示账号
+- 启动 Windows 原生的 FastAPI（8000）和 Vite（5173）
+- 打印本机/手机访问地址
+
+手机与电脑同一 Wi-Fi，访问脚本打印的 `http://<Windows局域网IP>:5173`。
+
+如果手机打不开，右键 `start-windows.bat`，选择“以管理员身份运行”一次，让脚本添加 5173/8000 防火墙规则。之后可正常双击启动。
+
+默认演示账号：`teacher / Teacher@123`；学生 `20230001 / 20230001`、`20230002 / 20230002`；班长 `20230003 / 20230003`。
+
+> `start.sh` 是 WSL/Linux 启动方式；`start-windows.bat` / `start-windows.ps1` 是纯 Windows 方式，二者不要混用。
+
+---
+
 ## 手动启动（可选）
 
 ```bash
