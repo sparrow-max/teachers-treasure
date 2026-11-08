@@ -19,7 +19,7 @@ const LOGIN_PATH = '/api/v1/auth/login'
 export const isMockMode = import.meta.env.VITE_USE_MOCK !== 'false'
 
 const client = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
+  baseURL: import.meta.env.VITE_API_BASE_URL || '',
   timeout: 10_000,
   headers: {
     'Content-Type': 'application/json; charset=utf-8',

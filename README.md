@@ -114,7 +114,32 @@ Base URL：`/api/v1`，全部字段使用 `snake_case`，响应为 `{ code, mess
 
 ---
 
-## 本地开发
+## 一键启动
+
+```bash
+./start.sh
+```
+
+脚本会完成：
+
+- 首次运行时安装数据库、后端、前端依赖
+- 执行数据库迁移并写入教师/演示学生账号
+- 启动 FastAPI 后端（`0.0.0.0:8000`）
+- 以**真实后端模式**启动前端（`0.0.0.0:5173`）
+- 打印本机与手机访问地址
+- `Ctrl+C` 同时停止前后端
+
+手机与电脑连同一 Wi-Fi，访问脚本输出的 `http://<电脑IP>:5173`。若自动检测的 IP 不可达（如 WSL NAT），可手动指定：
+
+```bash
+LAN_IP=192.168.1.10 ./start.sh
+```
+
+默认演示账号：`teacher / Teacher@123`，学生 `20230001 / 20230001`、`20230002 / 20230002`，班长 `20230003 / 20230003`；首次登录需修改密码。
+
+---
+
+## 手动启动（可选）
 
 ```bash
 # 数据库：初始化、迁移、种子（在仓库根目录）
@@ -137,7 +162,7 @@ uv pip install --python .venv/bin/python -r requirements.txt
 PYTHONPATH=.. .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-手机端演示：前端 `npm run dev -- --host 0.0.0.0`；在 `frontend/.env.local` 设置 `VITE_USE_MOCK=false` 和 `VITE_API_BASE_URL=http://<电脑局域网IP>:8000`；后端设置 `CORS_ORIGINS=http://<电脑局域网IP>:5173`。
+手机端演示：使用 `./start.sh` 最省事；手动启动时前端需设置 `VITE_USE_MOCK=false`（API 由 Vite 代理 `/api` 到本机 8000）。后端 `CORS_ORIGINS` 仅直连 API 时需要。
 
 数据库默认文件：`database/teacher_treasure.db`（不提交仓库）。详细说明见 [database/README.md](database/README.md)。
 
