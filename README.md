@@ -3,7 +3,7 @@
 一个简洁易用的课堂点名与签到 Web 应用：教师维护名单、一键点名，学生在线签到，结束后自动生成缺勤记录。
 
 > **当前状态：实施阶段（v1.3）**
-> 数据库模块（SQLite + SQLAlchemy + Alembic）已实现多班级；前端在 `feature/frontend-m3`，后端待接入。接口契约以 `docs/总体架构.md` 第 7 章为准。
+> 数据库、后端、前端均已实现多班级版本，正在联调。接口契约以 `docs/总体架构.md` 第 7 章为准。
 >
 > v1.1 新增：登录与 JWT 认证、教师/班长/学生三类角色视图与权限控制。
 > v1.1.2 澄清：视觉基线以 `frontend/src/styles/main.css` 为准；学生历史列表不返回本人签到时间。
@@ -57,8 +57,8 @@
 ```text
 .
 ├── docs/                  # 设计文档
-├── frontend/              # Vue 3 前端（feature/frontend-m3）
-├── backend/               # FastAPI 后端（待开发）
+├── frontend/              # Vue 3 前端（已实现多班级）
+├── backend/               # FastAPI 后端（已实现多班级）
 ├── database/              # SQLite + SQLAlchemy + Alembic（已实现）
 ├── README.md
 ├── LICENSE
@@ -127,7 +127,7 @@ SEED_TEACHER_PASSWORD='Teacher@123' \
 database/.venv/bin/python -m database.seeds.seed_demo
 database/.venv/bin/pytest database/tests -q
 
-# 前端（feature/frontend-m3）
+# 前端
 cd frontend && npm install && npm run dev
 
 # 后端（从 backend 目录启动，PYTHONPATH 指向仓库根）
