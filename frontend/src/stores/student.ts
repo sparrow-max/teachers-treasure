@@ -11,10 +11,13 @@ export const useStudentStore = defineStore('student', {
   }),
 
   actions: {
-    async fetchStudents() {
+    async fetchStudents(classId?: number) {
       this.loading = true
       try {
-        this.students = await listStudents({ active: true })
+        this.students = await listStudents({
+          active: true,
+          class_id: classId,
+        })
       } finally {
         this.loading = false
       }

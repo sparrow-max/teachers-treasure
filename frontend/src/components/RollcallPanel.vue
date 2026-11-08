@@ -3,6 +3,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { computed, onUnmounted, ref, watch } from 'vue'
 
 import { ApiError } from '@/api/error'
+import { useClassStore } from '@/stores/classroom'
 import { useRollcallStore } from '@/stores/rollcall'
 import { useStudentStore } from '@/stores/student'
 import { formatDateTime } from '@/utils/format'
@@ -10,6 +11,7 @@ import { notifyError } from '@/utils/notify'
 
 const rollcallStore = useRollcallStore()
 const studentStore = useStudentStore()
+const classStore = useClassStore()
 
 const starting = ref(false)
 const ending = ref(false)
@@ -98,14 +100,23 @@ async function handleStart(): Promise<void> {
     return
   }
 
+  const classId = classStore.currentClassId
+  if (classId === null) {
+    ElMessage.warning('请先创建并选择班级')
+    return
+  }
+
   if (!studentStore.students.length) {
-    ElMessage.warning('请先添加学生')
+    ElMessage.warning('该班级还没有在册学生')
     return
   }
 
   starting.value = true
   try {
-    await rollcallStore.startRollcall({ order_by: 'student_no' })
+    await rollcallStore.startRollcall({
+      class_id: classId,
+      order_by: 'student_no',
+    })
     carouselIndex.value = 0
     ElMessage.success('点名已开始')
   } catch (error) {
@@ -259,7 +270,7 @@ async function handleEnd(): Promise<void> {
     </div>
 
     <p v-else class="idle-hint">
-      添加学生后点击“开始点名”，系统将按学号顺序轮播。
+      在当前班级添加学生后点击“开始点名”，系统将按学号顺序轮播。
     </p>
   </section>
 </template>

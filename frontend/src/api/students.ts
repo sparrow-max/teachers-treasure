@@ -9,6 +9,8 @@ import type {
 export interface StudentQuery {
   keyword?: string
   active?: boolean
+  include_inactive?: boolean
+  class_id?: number
 }
 
 export function listStudents(params: StudentQuery = {}): Promise<Student[]> {

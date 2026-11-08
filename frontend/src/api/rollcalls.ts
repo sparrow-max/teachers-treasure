@@ -13,9 +13,10 @@ export interface RollcallListQuery {
   page?: number
   page_size?: number
   status?: SessionStatus
+  class_id?: number
 }
 
-export function startRollcall(payload: RollcallCreate = {}): Promise<SessionDetail> {
+export function startRollcall(payload: RollcallCreate): Promise<SessionDetail> {
   return request<SessionDetail>('post', '/api/v1/rollcalls', payload)
 }
 

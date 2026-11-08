@@ -16,10 +16,24 @@ export interface User {
   role: SystemRole
   display_name: string
   student_id: number | null
+  class_id: number | null
   must_change_password: boolean
   active: boolean
   created_at: string
   last_login_at: string | null
+}
+
+export interface SchoolClass {
+  id: number
+  name: string
+  code: string
+  active: boolean
+  created_at: string
+}
+
+export interface ClassCreate {
+  name: string
+  code: string
 }
 
 export interface LoginResponse {
@@ -45,6 +59,7 @@ export interface ChangePasswordResult {
 
 export interface Student {
   id: number
+  class_id: number
   student_no: string
   name: string
   role: Role
@@ -54,6 +69,7 @@ export interface Student {
 
 export interface Session {
   id: number
+  class_id: number
   title: string
   status: SessionStatus
   order_by: OrderBy
@@ -90,6 +106,7 @@ export interface Page<T> {
 }
 
 export interface StudentCreate {
+  class_id: number
   student_no: string
   name: string
   role?: StudentRole
@@ -98,6 +115,7 @@ export interface StudentCreate {
 }
 
 export interface RollcallCreate {
+  class_id: number
   title?: string
   order_by?: OrderBy
 }

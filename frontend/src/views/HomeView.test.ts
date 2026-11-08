@@ -107,12 +107,14 @@ describe('v1.1 角色页面', () => {
     const { useStudentStore } = await import('@/stores/student')
     const studentStore = useStudentStore()
     await studentStore.addStudent({
+      class_id: 1,
       student_no: '20231001',
       name: '张三',
       role: '学生',
       initial_password: 'Pass1234',
     })
     await studentStore.addStudent({
+      class_id: 1,
       student_no: '20231002',
       name: '李四',
       role: '学生',
@@ -125,7 +127,7 @@ describe('v1.1 角色页面', () => {
 
     const { useRollcallStore } = await import('@/stores/rollcall')
     const rollcallStore = useRollcallStore()
-    await rollcallStore.startRollcall()
+    await rollcallStore.startRollcall({ class_id: 1 })
     await nextTick()
 
     expect(wrapper.text()).toContain('点名中')
@@ -145,7 +147,7 @@ describe('v1.1 角色页面', () => {
 
     const { useRollcallStore } = await import('@/stores/rollcall')
     const rollcallStore = useRollcallStore()
-    await rollcallStore.startRollcall()
+    await rollcallStore.startRollcall({ class_id: 1 })
 
     await loginStudent('20230004', '20230004')
 
@@ -163,7 +165,7 @@ describe('v1.1 角色页面', () => {
 
     const { useRollcallStore } = await import('@/stores/rollcall')
     const rollcallStore = useRollcallStore()
-    await rollcallStore.startRollcall()
+    await rollcallStore.startRollcall({ class_id: 1 })
 
     await loginStudent('20230001', '20230001')
 

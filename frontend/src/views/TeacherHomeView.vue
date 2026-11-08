@@ -1,19 +1,22 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted, watch } from 'vue'
 
 import AbsenceList from '@/components/AbsenceList.vue'
 import AppHeader from '@/components/AppHeader.vue'
 import CheckinList from '@/components/CheckinList.vue'
+import ClassSwitcher from '@/components/ClassSwitcher.vue'
 import RollcallPanel from '@/components/RollcallPanel.vue'
 import StudentCheckinCard from '@/components/StudentCheckinCard.vue'
 import StudentForm from '@/components/StudentForm.vue'
 import StudentList from '@/components/StudentList.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useClassStore } from '@/stores/classroom'
 import { useRollcallStore } from '@/stores/rollcall'
 import { useStudentStore } from '@/stores/student'
 import { notifyError } from '@/utils/notify'
 
 const auth = useAuthStore()
+const classStore = useClassStore()
 const studentStore = useStudentStore()
 const rollcallStore = useRollcallStore()
 
@@ -34,16 +37,38 @@ const totalCount = computed(
 )
 const presentCount = computed(() => session.value?.present_count ?? 0)
 
+async function loadClassData(): Promise<void> {
+  const classId = classStore.currentClassId ?? undefined
+  await Promise.all([
+    studentStore.fetchStudents(classId),
+    rollcallStore.ensureCurrentSession(classId),
+  ])
+}
+
 onMounted(async () => {
   try {
-    await Promise.all([
-      studentStore.fetchStudents(),
-      rollcallStore.ensureCurrentSession(),
-    ])
+    await classStore.loadClasses()
+    await loadClassData()
   } catch (error) {
     notifyError(error)
   }
 })
+
+watch(
+  () => classStore.currentClassId,
+  async (value, previous) => {
+    if (value === previous) {
+      return
+    }
+    rollcallStore.reset()
+    studentStore.students = []
+    try {
+      await loadClassData()
+    } catch (error) {
+      notifyError(error)
+    }
+  },
+)
 
 onUnmounted(() => {
   rollcallStore.stopPolling()
@@ -70,10 +95,11 @@ onUnmounted(() => {
           <p class="hero-subtitle">
             {{
               auth.isMonitor
-                ? '查看班级名单，完成属于你的本人签到。'
-                : '一屏掌握全班出勤：发起点名、实时签到与缺勤记录。'
+                ? '查看本班名单，完成属于你的本人签到。'
+                : '一屏掌握本班出勤：选择班级、发起点名、实时签到与缺勤记录。'
             }}
           </p>
+          <ClassSwitcher class="hero-class" />
         </div>
 
         <div class="hero-metrics">
@@ -98,7 +124,14 @@ onUnmounted(() => {
         </div>
       </section>
 
-      <StudentForm v-if="auth.isTeacher" />
+      <StudentForm v-if="auth.isTeacher && classStore.currentClassId" />
+      <el-alert
+        v-if="auth.isTeacher && !classStore.currentClassId"
+        type="warning"
+        :closable="false"
+        title="还没有班级，请先在班级管理中创建班级"
+        class="class-alert"
+      />
       <RollcallPanel />
       <StudentCheckinCard v-if="auth.isMonitor" />
       <StudentList />

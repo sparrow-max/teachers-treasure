@@ -87,7 +87,7 @@ export const useRollcallStore = defineStore('rollcall', {
   },
 
   actions: {
-    async startRollcall(payload: RollcallCreate = {}) {
+    async startRollcall(payload: RollcallCreate) {
       const detail = await apiStartRollcall(payload)
       this.current = detail
       this.recomputeCounts()
@@ -119,7 +119,7 @@ export const useRollcallStore = defineStore('rollcall', {
       }
     },
 
-    async ensureCurrentSession() {
+    async ensureCurrentSession(classId?: number) {
       const restored = await this.restoreRollcall()
       if (restored) {
         return restored
@@ -129,6 +129,7 @@ export const useRollcallStore = defineStore('rollcall', {
         page: 1,
         page_size: 1,
         status: 'calling',
+        class_id: classId,
       })
       if (!page.items.length) {
         return null
@@ -141,11 +142,12 @@ export const useRollcallStore = defineStore('rollcall', {
       return detail
     },
 
-    async fetchCurrentSession() {
+    async fetchCurrentSession(classId?: number) {
       const calling = await listRollcalls({
         page: 1,
         page_size: 1,
         status: 'calling',
+        class_id: classId,
       })
       if (calling.items.length) {
         const detail = await getRollcall(calling.items[0].id)
@@ -159,6 +161,7 @@ export const useRollcallStore = defineStore('rollcall', {
         page: 1,
         page_size: 1,
         status: 'ended',
+        class_id: classId,
       })
       if (ended.items.length) {
         const detail = await getRollcall(ended.items[0].id)

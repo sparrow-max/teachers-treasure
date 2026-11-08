@@ -7,7 +7,7 @@ import type {
   OrderBy,
   Page,
   RecordItem,
-
+  SchoolClass,
   Session,
   SessionDetail,
   SessionStatus,
@@ -29,11 +29,13 @@ interface MockUser extends User {
 }
 
 interface MockState {
+  classes: SchoolClass[]
   students: Student[]
   sessions: SessionRow[]
   records: RecordItem[]
   users: MockUser[]
   seq: {
+    class: number
     student: number
     session: number
     record: number
@@ -41,7 +43,7 @@ interface MockState {
   }
 }
 
-const STORAGE_KEY = 'teacher-treasure.mock.v3'
+const STORAGE_KEY = 'teacher-treasure.mock.v4'
 const STUDENT_ROLES: StudentRole[] = ['学生', '班长']
 
 const STUDENT_SEEDS: Array<{ student_no: string; name: string; role: StudentRole }> = [
@@ -68,6 +70,7 @@ function createTeacherSeed(): MockUser {
     role: 'teacher',
     display_name: '演示教师',
     student_id: null,
+    class_id: null,
     must_change_password: true,
     active: true,
     created_at: nowIso(),
@@ -77,6 +80,13 @@ function createTeacherSeed(): MockUser {
 
 function emptyState(): MockState {
   const teacher = createTeacherSeed()
+  const classroom: SchoolClass = {
+    id: 1,
+    name: '2023级1班',
+    code: '2023-1',
+    active: true,
+    created_at: nowIso(),
+  }
   const students: Student[] = []
   const users: MockUser[] = [teacher]
 
@@ -86,6 +96,7 @@ function emptyState(): MockState {
 
     students.push({
       id: studentId,
+      class_id: classroom.id,
       student_no: seed.student_no,
       name: seed.name,
       role: seed.role,
@@ -100,6 +111,7 @@ function emptyState(): MockState {
       role: ROLE_MAP[seed.role],
       display_name: seed.name,
       student_id: studentId,
+      class_id: classroom.id,
       must_change_password: false,
       active: true,
       created_at: createdAt,
@@ -108,11 +120,13 @@ function emptyState(): MockState {
   })
 
   return {
+    classes: [classroom],
     students,
     sessions: [],
     records: [],
     users,
     seq: {
+      class: 1,
       student: students.length,
       session: 0,
       record: 0,
@@ -137,11 +151,17 @@ function loadState(): MockState {
     const students = Array.isArray(parsed.students)
       ? parsed.students
       : fallback.students
+    const classes =
+      Array.isArray(parsed.classes) && parsed.classes.length
+        ? parsed.classes
+        : fallback.classes
     const seq = { ...fallback.seq, ...(parsed.seq ?? {}) }
+    seq.class = Math.max(seq.class, ...classes.map((item) => item.id))
     seq.user = Math.max(seq.user, ...users.map((user) => user.id))
     seq.student = Math.max(0, ...students.map((student) => student.id))
 
     return {
+      classes,
       students,
       sessions: Array.isArray(parsed.sessions) ? parsed.sessions : [],
       records: Array.isArray(parsed.records) ? parsed.records : [],
@@ -322,6 +342,7 @@ function toUser(user: MockUser): User {
     role: user.role,
     display_name: user.display_name,
     student_id: user.student_id,
+    class_id: user.class_id,
     must_change_password: user.must_change_password,
     active: user.active,
     created_at: user.created_at,
@@ -513,6 +534,11 @@ function listStudents(query: Record<string, unknown>): Student[] {
     )
   }
 
+  const classId = intParam(query.class_id, 0, '班级 ID')
+  if (classId > 0) {
+    students = students.filter((student) => student.class_id === classId)
+  }
+
   return students
     .sort(
       (a, b) =>
@@ -526,6 +552,13 @@ function addStudent(body: unknown): Student {
   const studentNo = normalizeText(payload.student_no, '学号', 32)
   const name = normalizeText(payload.name, '姓名', 32)
   const role = parseStudentRole(payload.role)
+  const classId = intParam(payload.class_id, 1, '班级 ID')
+  const classroom = state.classes.find(
+    (item) => item.id === classId && item.active,
+  )
+  if (!classroom) {
+    throw new ApiError(40403, '班级不存在或已停用', 404)
+  }
 
   if (studentNo.length < 6) {
     throw new ApiError(40001, '学号需为 6–32 位', 400)
@@ -581,6 +614,7 @@ function addStudent(body: unknown): Student {
 
   const student: Student = {
     id: nextId('student'),
+    class_id: classId,
     student_no: studentNo,
     name,
     role,
@@ -598,6 +632,7 @@ function addStudent(body: unknown): Student {
       role: ROLE_MAP[role],
       display_name: name,
       student_id: student.id,
+      class_id: classId,
       must_change_password: true,
       active: true,
       created_at: nowIso(),
@@ -655,6 +690,11 @@ function listSessions(
     status ? session.status === status : true,
   )
 
+  const classId = intParam(query.class_id, 0, '班级 ID')
+  if (classId > 0) {
+    sessions = sessions.filter((session) => session.class_id === classId)
+  }
+
   if (user.role === 'student') {
     const studentId = user.student_id
     sessions = sessions.filter((session) =>
@@ -689,10 +729,20 @@ function listSessions(
 function startRollcall(body: unknown): SessionDetail {
   const payload = (body ?? {}) as Record<string, unknown>
   const orderBy = parseOrderBy(payload.order_by)
-  const activeStudents = state.students.filter((student) => student.active)
+  const classId = intParam(payload.class_id, 1, '班级 ID')
+  const classroom = state.classes.find(
+    (item) => item.id === classId && item.active,
+  )
+  if (!classroom) {
+    throw new ApiError(40403, '班级不存在或已停用', 404)
+  }
+
+  const activeStudents = state.students.filter(
+    (student) => student.active && student.class_id === classId,
+  )
 
   if (activeStudents.length === 0) {
-    throw new ApiError(40905, '学生名单为空，无法开始点名', 409)
+    throw new ApiError(40905, '该班级没有在册学生，无法开始点名', 409)
   }
 
   const title =
@@ -706,6 +756,7 @@ function startRollcall(body: unknown): SessionDetail {
 
   const row: SessionRow = {
     id: nextId('session'),
+    class_id: classId,
     title,
     status: 'calling',
     order_by: orderBy,
@@ -800,6 +851,87 @@ function endRollcall(sessionId: number): SessionDetail {
   row.ended_at = endedAt
   persist()
   return toDetail(row)
+}
+
+function toClass(item: SchoolClass): SchoolClass {
+  return clone(item)
+}
+
+function listClasses(
+  query: Record<string, unknown>,
+  user: MockUser,
+): SchoolClass[] {
+  const active =
+    query.active === undefined || query.active === ''
+      ? true
+      : String(query.active) !== 'false'
+  let classes = state.classes.filter((item) =>
+    active ? item.active : !item.active,
+  )
+  if (user.role !== 'teacher') {
+    classes = classes.filter((item) => item.id === user.class_id)
+  }
+  return classes.sort((a, b) => a.code.localeCompare(b.code)).map(toClass)
+}
+
+function addClass(body: unknown): SchoolClass {
+  const payload = (body ?? {}) as Record<string, unknown>
+  const name = normalizeText(payload.name, '班级名称', 32)
+  const code = normalizeText(payload.code, '班级编号', 32)
+  if (state.classes.some((item) => item.code === code)) {
+    throw new ApiError(40907, '班级编号已存在', 409)
+  }
+  const classroom: SchoolClass = {
+    id: nextId('class'),
+    name,
+    code,
+    active: true,
+    created_at: nowIso(),
+  }
+  state.classes.push(classroom)
+  persist()
+  return toClass(classroom)
+}
+
+function deactivateClass(classId: number): { id: number; deleted: boolean } {
+  const classroom = state.classes.find((item) => item.id === classId)
+  if (!classroom) {
+    throw new ApiError(40403, '班级不存在', 404)
+  }
+  if (
+    state.students.some(
+      (student) => student.active && student.class_id === classId,
+    )
+  ) {
+    throw new ApiError(40908, '班级仍有在册学生，无法停用', 409)
+  }
+  classroom.active = false
+  persist()
+  return { id: classId, deleted: true }
+}
+
+function handleClasses(
+  method: Method,
+  rest: string[],
+  body: unknown,
+  query: Record<string, unknown>,
+  token: string | null,
+): unknown {
+  if (method === 'get' && rest.length === 0) {
+    return listClasses(query, requireUser(token))
+  }
+
+  if (method === 'post' && rest.length === 0) {
+    requireUser(token, ['teacher'])
+    return addClass(body)
+  }
+
+  if (method === 'delete' && rest.length === 1) {
+    requireUser(token, ['teacher'])
+    return deactivateClass(parsePositiveInt(rest[0], '班级 ID'))
+  }
+
+  throw new ApiError(40001, '请求方式或路径不受支持', 400)
 }
 
 function handleAuth(
@@ -906,6 +1038,10 @@ export async function mockRequest(
 
   if (parts[0] === 'auth') {
     return handleAuth(method, parts.slice(1), body, token)
+  }
+
+  if (parts[0] === 'classes') {
+    return handleClasses(method, parts.slice(1), body, query, token)
   }
 
   if (parts[0] === 'students') {

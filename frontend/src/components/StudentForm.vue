@@ -3,12 +3,14 @@ import { ElMessage } from 'element-plus'
 import { reactive, ref } from 'vue'
 
 import { ApiError } from '@/api/error'
+import { useClassStore } from '@/stores/classroom'
 import { useStudentStore } from '@/stores/student'
 import { notifyError } from '@/utils/notify'
 
 import type { StudentRole } from '@/types/api'
 
 const studentStore = useStudentStore()
+const classStore = useClassStore()
 
 const form = reactive({
   name: '',
@@ -65,9 +67,16 @@ async function submit(): Promise<void> {
     return
   }
 
+  const classId = classStore.currentClassId
+  if (classId === null) {
+    nameError.value = '请先创建并选择班级'
+    return
+  }
+
   submitting.value = true
   try {
     await studentStore.addStudent({
+      class_id: classId,
       name: form.name.trim(),
       student_no: form.student_no.trim(),
       role: form.role,
@@ -113,7 +122,9 @@ async function submit(): Promise<void> {
   <section class="card">
     <div class="section-head">
       <h2 class="section-title">添加学生</h2>
-      <span class="section-hint">添加后自动开通账号，首次登录需修改密码</span>
+      <span class="section-hint">
+        添加到：{{ classStore.currentClass?.name ?? '未选择班级' }}；添加后自动开通账号
+      </span>
     </div>
 
     <form class="student-form" @submit.prevent="submit">

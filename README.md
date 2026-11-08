@@ -130,9 +130,14 @@ database/.venv/bin/pytest database/tests -q
 # 前端（feature/frontend-m3）
 cd frontend && npm install && npm run dev
 
-# 后端（待实现）
-cd backend && pip install -r requirements.txt && uvicorn app.main:app --reload
+# 后端（从 backend 目录启动，PYTHONPATH 指向仓库根）
+cd backend
+uv venv .venv --python 3.14
+uv pip install --python .venv/bin/python -r requirements.txt
+PYTHONPATH=.. .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
+
+手机端演示：前端 `npm run dev -- --host 0.0.0.0`；在 `frontend/.env.local` 设置 `VITE_USE_MOCK=false` 和 `VITE_API_BASE_URL=http://<电脑局域网IP>:8000`；后端设置 `CORS_ORIGINS=http://<电脑局域网IP>:5173`。
 
 数据库默认文件：`database/teacher_treasure.db`（不提交仓库）。详细说明见 [database/README.md](database/README.md)。
 

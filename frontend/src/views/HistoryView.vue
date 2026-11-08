@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 
 import AbsenceList from '@/components/AbsenceList.vue'
 import AppHeader from '@/components/AppHeader.vue'
 import CheckinList from '@/components/CheckinList.vue'
+import ClassSwitcher from '@/components/ClassSwitcher.vue'
 import { getRollcall, listRollcalls } from '@/api/rollcalls'
 import { useAuthStore } from '@/stores/auth'
+import { useClassStore } from '@/stores/classroom'
 import { formatDateTime } from '@/utils/format'
 import { notifyError } from '@/utils/notify'
 
@@ -14,6 +16,7 @@ import type { Session, SessionDetail, SessionStatus } from '@/types/api'
 type TagType = 'warning' | 'info'
 
 const auth = useAuthStore()
+const classStore = useClassStore()
 
 const items = ref<Session[]>([])
 const total = ref(0)
@@ -43,6 +46,9 @@ async function load(): Promise<void> {
       page: page.value,
       page_size: pageSize,
       status: status.value || undefined,
+      class_id: auth.isTeacher
+        ? classStore.currentClassId ?? undefined
+        : undefined,
     })
     items.value = result.items
     total.value = result.total
@@ -78,7 +84,24 @@ async function openDetail(session: Session): Promise<void> {
   }
 }
 
-onMounted(load)
+onMounted(async () => {
+  try {
+    await classStore.loadClasses()
+    await load()
+  } catch (error) {
+    notifyError(error)
+  }
+})
+
+watch(
+  () => classStore.currentClassId,
+  (value, previous) => {
+    if (auth.isTeacher && value !== previous) {
+      page.value = 1
+      void load()
+    }
+  },
+)
 </script>
 
 <template>
@@ -98,17 +121,20 @@ onMounted(load)
             }}
           </p>
         </div>
-        <el-select
-          v-model="status"
-          class="status-filter"
-          placeholder="全部场次"
-          clearable
-          @change="onStatusChange"
-          @clear="onStatusChange"
-        >
-          <el-option label="点名中" value="calling" />
-          <el-option label="已结束" value="ended" />
-        </el-select>
+        <div class="page-head-actions">
+          <ClassSwitcher />
+          <el-select
+            v-model="status"
+            class="status-filter"
+            placeholder="全部场次"
+            clearable
+            @change="onStatusChange"
+            @clear="onStatusChange"
+          >
+            <el-option label="点名中" value="calling" />
+            <el-option label="已结束" value="ended" />
+          </el-select>
+        </div>
       </div>
 
       <section class="card">
@@ -229,6 +255,12 @@ onMounted(load)
 
 .status-filter {
   width: 170px;
+}
+
+.page-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .status-filter :deep(.el-select__wrapper) {
