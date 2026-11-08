@@ -3,7 +3,7 @@
 一个简洁易用的课堂点名与签到 Web 应用：教师维护名单、一键点名，学生在线签到，结束后自动生成缺勤记录。
 
 > **当前状态：实施阶段（v1.3）**
-> 数据库模块（SQLite + SQLAlchemy + Alembic）已实现多班级；前端在 `feature/frontend-m3`，后端待接入。接口契约以 `docs/总体架构.md` 第 7 章为准。
+> 数据库、后端、前端均已实现多班级版本，正在联调。接口契约以 `docs/总体架构.md` 第 7 章为准。
 >
 > v1.1 新增：登录与 JWT 认证、教师/班长/学生三类角色视图与权限控制。
 > v1.1.2 澄清：视觉基线以 `frontend/src/styles/main.css` 为准；学生历史列表不返回本人签到时间。
@@ -57,8 +57,8 @@
 ```text
 .
 ├── docs/                  # 设计文档
-├── frontend/              # Vue 3 前端（feature/frontend-m3）
-├── backend/               # FastAPI 后端（待开发）
+├── frontend/              # Vue 3 前端（已实现多班级）
+├── backend/               # FastAPI 后端（已实现多班级）
 ├── database/              # SQLite + SQLAlchemy + Alembic（已实现）
 ├── README.md
 ├── LICENSE
@@ -127,12 +127,17 @@ SEED_TEACHER_PASSWORD='Teacher@123' \
 database/.venv/bin/python -m database.seeds.seed_demo
 database/.venv/bin/pytest database/tests -q
 
-# 前端（feature/frontend-m3）
+# 前端
 cd frontend && npm install && npm run dev
 
-# 后端（待实现）
-cd backend && pip install -r requirements.txt && uvicorn app.main:app --reload
+# 后端（从 backend 目录启动，PYTHONPATH 指向仓库根）
+cd backend
+uv venv .venv --python 3.14
+uv pip install --python .venv/bin/python -r requirements.txt
+PYTHONPATH=.. .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
+
+手机端演示：前端 `npm run dev -- --host 0.0.0.0`；在 `frontend/.env.local` 设置 `VITE_USE_MOCK=false` 和 `VITE_API_BASE_URL=http://<电脑局域网IP>:8000`；后端设置 `CORS_ORIGINS=http://<电脑局域网IP>:5173`。
 
 数据库默认文件：`database/teacher_treasure.db`（不提交仓库）。详细说明见 [database/README.md](database/README.md)。
 
