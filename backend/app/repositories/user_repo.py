@@ -88,3 +88,17 @@ def set_last_login(
         .where(User.id == user_id)
         .values(last_login_at=logged_in_at)
     )
+
+def deactivate_user_by_student(
+    db: Session,
+    student_id: int,
+) -> int:
+    result = db.execute(
+        update(User)
+        .where(
+            User.student_id == student_id,
+            User.active.is_(True),
+        )
+        .values(active=False)
+    )
+    return result.rowcount
