@@ -22,6 +22,8 @@ venv/
 
 # 数据库
 *.db
+*.db-wal
+*.db-shm
 *.sqlite
 *.sqlite3
 *.dump
